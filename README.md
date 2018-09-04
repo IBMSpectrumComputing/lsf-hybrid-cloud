@@ -42,6 +42,7 @@ As you explore the configuration of the cluster other services may also be neede
 The code in this repository can deploy two types of LSF Cluster:
 1. LSF Stretch Cluster
 2. LSF Multi Cluster
+
 The type of cluster to deploy will depend greatly on the workload to run on the cloud and the number of machines.  Some experimentation will be needed to determine which is best for you.
 Some factors to consider are:
 1. Network latency between your on premise environment and the primary cloud environment being considered
