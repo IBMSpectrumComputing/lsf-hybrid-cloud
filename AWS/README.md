@@ -13,7 +13,9 @@ It is necessary to choose the type of LSF cluster to deploy early in the process
 For a LSF Multi Cluster deployment change the file setting to:
 
 > \# What type of cluster to deploy.  Uncomment one of these
+>
 > multi_cluster: true
+>
 > \#hybrid_cluster: true
 
 If these values are changed it will be necessary to use the Cleanup.yml playbook to reset the configuration.  
@@ -21,15 +23,15 @@ If these values are changed it will be necessary to use the Cleanup.yml playbook
 If you have an existing VPC, it is possible to skip this step by taking the related information and populating the AWS-config.yml file.
 Make a backup copy of the AWS/AWS-config.yml file.  Edit the AWS/AWS-config.yml file, and set the appropriate values.
 
-##AWS_Region   		
+### AWS_Region   		
 
 Set this to the region you wish to deploy in
 
-##AWS_Access_Key 	
+### AWS_Access_Key 	
 
 Set this to the Access Key for the AWS user account that is being used to deploy to the cloud.  This is needed for the duration of the deployment.  Once the cluster is deployed on the cloud these values can be deleted. Begins with: AK
 
-##AWS_Secret_Key 	
+## AWS_Secret_Key 	
 
 Set this to the Secret Key for the AWS user account that is being used to deploy to the cloud.  This is needed for the duration of the deployment.  Once the cluster is deployed on the cloud these values can be deleted. 
 
