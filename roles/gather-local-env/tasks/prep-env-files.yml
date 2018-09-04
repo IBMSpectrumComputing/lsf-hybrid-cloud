@@ -1,0 +1,33 @@
+---
+# -----------------------------------
+#  Copyright IBM Corp. 1992, 2018. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+- name: Make local files directory
+  file:
+    path: "{{ RC_PLAY_TOP }}/files"
+    state: directory
+
+- name: Copy the SSH id_rsa.pub to our files directory
+  copy:
+    src: /root/.ssh/id_rsa.pub
+    dest: "{{ RC_PLAY_TOP }}/files/id_rsa.pub"
+    remote_src: yes
+
+- name: Gather the hosts entires
+  shell: getent hosts | grep -v localhost > "{{ RC_PLAY_TOP }}/files/hosts"
+
+- name: Gather the users (passwd) entries
+  shell: getent passwd |awk -F':' '$3 >= 1000 { print $0 }' |grep -v nfsnobody > "{{ RC_PLAY_TOP }}/files/passwd" ; echo "ok"
+
+- name: Gather the users (shadow) entries
+  shell: getent shadow > "{{ RC_PLAY_TOP }}/files/shadow.tmp" ; cat /dev/null > "{{ RC_PLAY_TOP }}/files/shadow" ; echo "ok"
+
+- name: Extract the users (shadow) entries
+  shell: for i in `cat {{ RC_PLAY_TOP }}/files/passwd`; do uname=`echo $i |awk -F':' '{ print $1 }'` ; grep $uname {{ RC_PLAY_TOP }}/files/shadow.tmp >> "{{ RC_PLAY_TOP }}/files/shadow" ; done ; echo "ok"
+
+- name: Gather the users (group) entries
+  shell: getent group |awk -F':' '$3 >= 1000 { print $0 }' |grep -v nfsnobody > "{{ RC_PLAY_TOP }}/files/group" ; echo "ok"
+

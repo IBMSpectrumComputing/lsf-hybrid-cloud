@@ -1,0 +1,56 @@
+---
+#-----------------------------------
+# Copyright IBM Corp. 1992, 2017. All rights reserved.
+# US Government Users Restricted Rights - Use, duplication or disclosure
+# restricted by GSA ADP Schedule Contract with IBM Corp.
+#-----------------------------------
+
+- name: Install Dependencies for getting boto packages
+  package:
+    name: "{{ item }}"
+    state: latest
+  with_items:
+    - wget
+  when: ansible_os_family == "RedHat"
+
+- name: Get EPEL Repo rpm
+  shell: wget http://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+  args:
+    chdir: /root
+    creates: /root/epel-release-latest-7.noarch.rpm
+    warn: false
+
+- name: Add EPEL Repo rpm
+  shell: rpm -ivh epel-release-latest-7.noarch.rpm
+  args:
+    chdir: /root
+    warn: False
+    creates: /etc/yum.repos.d/epel.repo
+
+- name: Install boto packages
+  package:
+    name: "{{ item }}"
+    state: latest
+  with_items:
+    - python2-boto
+    - python2-boto3
+  when: ansible_os_family == "RedHat"
+
+- name: Make local files directory
+  file:
+    path: "{{ RC_PLAY_TOP }}/files"
+    state: directory
+
+- name: Copy the SSH id_rsa.pub to our files directory
+  copy: 
+    src: /root/.ssh/id_rsa.pub
+    dest: "{{ RC_PLAY_TOP }}/files/id_rsa.pub"
+
+- name: Remove VPN Server tun0 IP from SSH knownhosts
+  lineinfile:
+    dest: /root/.ssh/known_hosts
+    state: absent
+    # regexp: '^10\.0\.11\.1'
+    regexp: "^{{ SERVER_IP|regex_escape() }}.*"
+    # regexp: "{{ SERVER_IP }}.*"
+

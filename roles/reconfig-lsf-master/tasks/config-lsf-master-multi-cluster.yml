@@ -1,0 +1,79 @@
+
+---
+# -----------------------------------
+#  Copyright IBM Corp. 1992, 2018. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+# Modify the LSF lsf.shared file
+- name: Update lsf.shared to add Servers
+  lineinfile:
+    dest: "{{ LSF_CONF_DIR }}/lsf.shared"
+    backrefs: yes
+    state: present
+    regexp: '^ClusterName.*'
+    line: 'ClusterName     Servers                 # Keyword'
+    backup: yes
+
+- name: Update on-premise cluster info with master host name in lsf.shared 
+  lineinfile:
+    dest: "{{ LSF_CONF_DIR }}/lsf.shared"
+    state: present
+    backrefs: yes
+    regexp: "^{{ LOCAL_LSF_CLUSTER_NAME }}.*"
+    line: '{{ LOCAL_LSF_CLUSTER_NAME }}        {{ groups.LSF_Masters[0] }}'
+    backup: yes
+
+- name: Append on-cloud cluster info into lsf.shared
+  lineinfile:
+    dest: "{{ LSF_CONF_DIR }}/lsf.shared"
+    state: present
+    backup: yes
+    insertbefore: "^End Cluster.*"
+    line: '{{ CLOUD_LSF_CLUSTER_NAME | default("myCloudCluster") }} {{ ec2servers[0].prv_name}}'
+
+- name: Update LSF cluster file
+  lineinfile:
+    dest: "{{ LSF_CONF_DIR }}/lsf.cluster.{{ LOCAL_LSF_CLUSTER_NAME }}"
+    state: present
+    insertafter: "^Begin Parameters.*"
+    backup: yes
+    line: "PRODUCTS=LSF_Make LSF_Base LSF_Manager LSF_MultiCluster"
+
+#update lsb.queue to add receive request queue
+- name: Update the lsb.queue file
+  blockinfile:
+    dest: "{{ LSF_CONF_DIR }}/lsbatch/{{ LOCAL_LSF_CLUSTER_NAME }}/configdir/lsb.queues"
+    backup: yes
+    block: |
+      Begin Queue
+      QUEUE_NAME   = send2cloud
+      SNDJOBS_TO    = recOnprem@{{ CLOUD_LSF_CLUSTER_NAME }}
+      PRIORITY      = 40
+      DESCRIPTION   = Sample Queue for send cluster request to cloud
+      End Queue
+
+- name: Clear the hosts file
+  shell: grep -v "{{ SERVER_IP }}" hosts > hosts.WRK ; mv hosts.WRK hosts
+  args:
+    chdir "{{ LSF_CONF_DIR }}"
+
+- name: Create a host file
+  template:
+    src: ../../../template/hosts-lsf.j2
+    dest: "{{ LSF_CONF_DIR }}/hosts"
+    follow: yes
+
+- name: Copy LSF host file to a common location
+  copy:
+    src: "{{ LSF_CONF_DIR }}/hosts"
+    dest: "{{ RC_PLAY_TOP }}/files/hosts-lsf"
+    follow: yes
+
+- name: Archive the playbook for provisoning lsf servers
+  shell: tar cvf deploy-lsf-server.tar Storage-config.yml inventory_ec2servers.yml inventory_ec2.yml make-lsf-server.yml lsf-inventory roles/ group_vars/ template/ AWS/
+  args:
+    chdir: "{{ RC_PLAY_TOP }}"
+
+

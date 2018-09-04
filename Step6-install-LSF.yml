@@ -1,0 +1,68 @@
+#
+#-----------------------------------
+# Copyright IBM Corp. 1992, 2017. All rights reserved.
+# US Government Users Restricted Rights - Use, duplication or disclosure
+# restricted by GSA ADP Schedule Contract with IBM Corp.
+#-----------------------------------
+#
+---
+
+- name: Read in EC2 inventory file and assemble a host list
+  hosts: LSF_Masters[0]
+  tasks:
+    - name: Reload EC2 server inventory
+      include_vars: "{{ RC_PLAY_TOP }}/inventory_ec2servers.yml"
+
+    - name: Make a hostgroup from the private IPs for ansible to connect to
+      add_host:
+        hostname: "{{ item.prv_ip }}"
+        groupname: ec2servers
+        prv_ip: "{{ item.prv_ip }}"
+        pub_ip: "{{ item.pub_ip }}"
+        awsid:  "{{ item.awsid }}"
+        awsname: "{{ item.name }}"
+        prv_name: "{{ item.prv_name }}"
+        isvpn:  "{{ item.isvpn }}"
+      with_items: "{{ ec2servers }}"
+
+- name: Reconfigure LSF Master
+  hosts: LSF_Masters[0]
+  tasks:
+    - include_vars: "AWS/AWS-config.yml"
+    - include_vars: "{{ RC_PLAY_TOP }}/inventory_ec2servers.yml"
+  roles:
+    - reconfig-lsf-master
+
+- name: Configure EC2 main instance as part of LSF Cluster
+  hosts: ec2servers[0]
+  gather_facts: true
+  tasks:
+    - include_vars: "AWS/AWS-config.yml"
+    - include_vars: "{{ RC_PLAY_TOP }}/inventory_ec2servers.yml"
+    
+    - name: include deploy-lsf role
+      include_role:
+        name: deploy-lsf
+      when:
+        - hybrid_cluster is defined
+        - hybrid_cluster == true
+    
+    - name: include deploy-cloud-lsf-master role
+      include_role:
+        name: deploy-cloud-lsf-master
+      when:
+        - multi_cluster is defined
+        - multi_cluster == true
+
+- name: Configure Additional EC2 server instances to be LSF Servers
+  hosts: ec2servers[1:]
+  gather_facts: true
+  tasks: 
+    - include_vars: "AWS/AWS-config.yml"
+
+    - name: include deploy-cloud-server role
+      include_role:
+        name: deploy-cloud-server
+      when:
+        - hybrid_cluster is defined
+        - hybrid_cluster == true

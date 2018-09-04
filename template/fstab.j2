@@ -1,0 +1,9 @@
+# These are fstab entries compiled from the Storage-config.yml
+{% for i in sharedir %}
+{% set exprt=i.export %}
+{% set mount=i.mountpnt %}
+{% set type=i.type %}
+{% set fsargs=i.args %}
+{{ exprt }}      {{ mount }}       {{ type }}    {{ fsargs }}    0 0
+{{ '' }}
+{%- endfor %}

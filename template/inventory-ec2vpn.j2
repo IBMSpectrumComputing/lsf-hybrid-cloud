@@ -1,0 +1,12 @@
+---
+# EC2 inventory information
+# Generated file.  Do not edit (unless you know what you are doing) ;)
+
+ec2vpn:
+{% set list1 = [] %}
+{% for i in ec2.instances %}
+{% set dev=i.block_device_mapping %}
+{% set volid=dev['/dev/sda1'].volume_id %}
+{% if list1.append( {"name": i.public_dns_name, "pub_ip": i.public_ip, "prv_ip": i.private_ip, "prv_name": i.private_dns_name, "awsid": i.id, "awsvol": volid } ) %}{% endif %}
+{{ list1 | to_yaml }}
+{%- endfor %}

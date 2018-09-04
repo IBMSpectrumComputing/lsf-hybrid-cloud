@@ -1,0 +1,42 @@
+---
+#-----------------------------------
+# Copyright IBM Corp. 1992, 2017. All rights reserved.
+# US Government Users Restricted Rights - Use, duplication or disclosure
+# restricted by GSA ADP Schedule Contract with IBM Corp.
+#-----------------------------------
+
+# The following routes are NOT for the VPN node
+- name: Add Route to the on premises network
+  shell: route add -net "{{ CLIENT_NET }}" netmask "{{ CLIENT_MASK }}" gw "{{ hostvars[groups.ec2vpn[0]]['prv_ip'] }}"
+
+- name: Add Route to the VPN network
+  shell: route add -net "{{ SERVER_NET }}" netmask "{{ SERVER_MASK }}" gw "{{ hostvars[groups.ec2vpn[0]]['prv_ip'] }}"
+
+- name: Load variables
+  include_vars: "{{ RC_PLAY_TOP }}/Storage-config.yml"
+
+- name: Copy the fstab extensions to the cloud machines
+  copy: 
+    src: "{{ RC_PLAY_TOP }}/files/fstab.append"
+    dest: /etc/fstab.append
+
+- name: Merge the fstab entries
+  shell: grep -q Storage-config /etc/fstab || cat /etc/fstab.append >> /etc/fstab
+  args:
+    executable: /bin/bash
+    warn: no
+
+- name: Make the needed directories
+  shell: test -d "{{ item }}" || mkdir -p "{{ item }}"
+  args:
+    executable: /bin/bash
+    warn: no
+  with_items:
+    - "{% set list1 = [] %}{% for i in sharedir %}{% if list1.append( i.mountpnt ) %}{% endif %}{% endfor %}{{ list1 }}"
+
+- name: Warning
+  debug:
+    msg: WARNING if there is a problem with the fstab entries it can cause the play to block indefinately!
+
+- name: Mounting Storage from on premises network
+  shell: mount -a

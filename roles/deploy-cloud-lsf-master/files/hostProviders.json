@@ -1,0 +1,12 @@
+{
+    "providers":[
+        {
+            "name": "aws",
+            "type": "awsProv",
+            "confPath": "resource_connector/aws",
+            "scriptPath": "resource_connector/aws",
+            "preProvPath": "/opt/ibm/lsfsuite/lsf/10.1/resource_connector/aws/scripts/bringupLSF.sh",
+            "provTimeOut": 10
+        }
+    ]
+}

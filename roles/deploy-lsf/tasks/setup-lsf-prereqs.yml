@@ -1,0 +1,133 @@
+---
+# -----------------------------------
+#  Copyright IBM Corp. 1992, 2018. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+- name: Start installing LSF Prerequisites
+  debug:
+    msg: "Ansible OS is {{ ansible_os_family }}"
+
+- name: Ensure group "lsfadmin" exists
+  group:
+    name: lsfadmin
+    gid: 495
+    state: present
+
+- name: Add User lsfadmin
+  user:
+    name: lsfadmin
+    comment: "lsfadmin"
+    shell: /bin/bash
+    home: /home/lsfadmin
+    createhome: yes
+    password: "$6$f6eESttN4lToRaKy$1IWHwBeIn8VYE9PQPzWZDSvdEigUB.1g9wLyz0t/g1.Oa7ZkwVC0YTXRGqehjgVVZUf.bRuWkm8urjZEyfh2u0"
+    uid: 495
+    group: lsfadmin
+    state: present
+    update_password: always
+
+- name: Make LSF package repo directory
+  shell: mkdir -p /opt/ibm/lsf-rpm-repo
+
+- name: Copy LSF Server rpms
+  copy:
+    src: "{{ item }}"
+    dest: /opt/ibm/lsf-rpm-repo
+    owner: root
+    mode: 644
+  with_fileglob:
+    - files/rpms/*rpm
+
+- name: Create a repository from the copied rpms
+  shell: createrepo /opt/ibm/lsf-rpm-repo
+
+- name: Configure the local LSF repo
+  yum_repository:
+    name: lsf
+    description: Local LSF YUM repo
+    baseurl: file:///opt/ibm/lsf-rpm-repo
+    enabled: no
+    gpgcheck: no
+
+# The lsf-ego-server will pull in the lsf-server, lsf-client, lsf-conf
+- name: Install LSF packages
+  yum:
+    name: lsf-ego-server
+    enablerepo: lsf
+    state: present
+
+# Modify the LSF lsf.conf file
+- name: Set the LSF_MASTER_LIST
+  lineinfile: 
+    dest: "{{ LSF_TOP }}/conf/lsf.conf"
+    state: present
+    regexp: '^LSF_MASTER_LIST.*'
+    line: "{{ hostvars[groups.LSF_Masters[0]]['LSF_MASTER_LIST'] }}"
+
+- name: Set the LSF_SERVER_HOSTS
+  lineinfile: 
+    dest: "{{ LSF_TOP }}/conf/lsf.conf"
+    state: present
+    regexp: '^LSF_SERVER_HOSTS.*'
+    line: "{{ hostvars[groups.LSF_Masters[0]]['LSF_SERVER_HOSTS'] }}"
+
+- name: Set the LSF_LOCAL_RESOURCES
+  lineinfile:
+    dest: "{{ LSF_TOP }}/conf/lsf.conf"
+    state: present
+    regexp: '^LSF_LOCAL_RESOURCES.*'
+    line: LSF_LOCAL_RESOURCES="[resource awshost]"
+
+- name: Set LSF_GET_CONF=lim
+  lineinfile:
+    dest: "{{ LSF_TOP }}/conf/lsf.conf"
+    state: present
+    regexp: '^LSF_GET_CONF.*'
+    line: "LSF_GET_CONF=lim"
+
+- name: Set the EGO_MASTER_LIST
+  lineinfile:
+    dest: "{{ LSF_TOP }}/conf/ego/{{ LOCAL_LSF_CLUSTER_NAME | default('myCluster') }}/kernel/ego.conf"
+    state: present
+    regexp: '^EGO_MASTER_LIST.*'
+    line: "{{ hostvars[groups.LSF_Masters[0]]['EGO_MASTER_LIST'] }}"
+
+- name: Fix the master_hosts list
+  lineinfile:
+    dest: "{{ LSF_TOP }}/conf/lsbatch/{{ LOCAL_LSF_CLUSTER_NAME | default('myCluster') }}/configdir/lsb.hosts"
+    backup: yes
+    backrefs: yes
+    regexp: '^(master_hosts.*)'
+    line: '# \1'
+
+- name: Disable DNS hostname resolution on cloud machines
+  # Having it on messes up LSF because private IP's overlap with Amazon private IPs
+  lineinfile:
+    dest: "/etc/nsswitch.conf"
+    state: present
+    regexp: '^hosts.*'
+    line: 'hosts:      files myhostname'
+
+- name: Copy LSF host file to a common location
+  copy:
+    dest: "{{ LSF_CONF_DIR }}/hosts"
+    src: "{{ RC_PLAY_TOP }}/files/hosts-lsf"
+    follow: yes
+
+- name: Disable DNS hostname resolution on cloud machines
+  # Having it on messes up LSF because private IP's overlap with Amazon private IPs
+  lineinfile:
+    dest: "/etc/nsswitch.conf"
+    state: present
+    regexp: '^hosts.*'
+    line: 'hosts:      files myhostname'
+
+- name: Start LSF Daemons
+  systemd:
+    name: lsfd
+    state:  restarted
+    enabled: yes
+    daemon_reload: yes
+ 

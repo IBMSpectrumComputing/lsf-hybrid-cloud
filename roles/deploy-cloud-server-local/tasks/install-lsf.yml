@@ -1,0 +1,14 @@
+---
+# -----------------------------------
+#  Copyright IBM Corp. 1992, 2018. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+# The lsf-ego-server will pull in the lsf-server, lsf-client, lsf-conf
+- name: Install LSF packages
+  yum:
+    name: lsf-ego-server
+    enablerepo: lsf
+    state: present
+

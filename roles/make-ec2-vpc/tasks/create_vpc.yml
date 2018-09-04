@@ -1,0 +1,35 @@
+---
+#-----------------------------------
+# Copyright IBM Corp. 1992, 2017. All rights reserved.
+# US Government Users Restricted Rights - Use, duplication or disclosure
+# restricted by GSA ADP Schedule Contract with IBM Corp.
+#-----------------------------------
+
+- name: Running  create_vpc.yml
+  debug:
+    msg: "Creating VPC in {{ AWS_Region }} with CIDR block {{ AWS_VPC_CIDR }} "
+
+- name: Create a VPC
+  ec2_vpc_net:
+    name: My_LSF_VPC
+    aws_access_key: "{{ AWS_Access_Key }}"
+    aws_secret_key: "{{ AWS_Secret_Key }}"
+    ec2_url: "{{ AWS_EC2_URL }}"
+    region: "{{ AWS_Region }}"
+    cidr_block: "{{ AWS_VPC_CIDR }}"
+    state: present
+  register: vpc
+
+- name: Dump variables for debugging
+  template:
+    src: "{{ RC_PLAY_TOP }}/template/dumpall.j2"
+    dest: /tmp/ansible-variables-vpc
+  when: Debug_Tasks == true
+
+- name: Set vpc value in file
+  lineinfile:
+    dest: "{{ RC_PLAY_TOP }}/AWS/AWS-config.yml"
+    regexp: '^AWS_VPC:.*'
+    line: 'AWS_VPC: {{ vpc.vpc.id }}'
+
+

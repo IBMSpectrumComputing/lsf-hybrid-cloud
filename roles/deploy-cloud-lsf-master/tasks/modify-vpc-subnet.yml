@@ -1,0 +1,30 @@
+---
+# -----------------------------------
+# #  Copyright IBM Corp. 1992, 2018. All rights reserved.
+# #  US Government Users Restricted Rights - Use, duplication or disclosure
+# #  restricted by GSA ADP Schedule Contract with IBM Corp.
+# # -----------------------------------
+#
+
+# ansible 2.2.3 cannot support create subnet with map_public. the map_public is supported since ansible 2.4
+# the created subnet cannot have public ip assigned automatically.
+# so that the ec2 host from rc cannot have public ip
+
+- name: Modify subnet to enable auto-assign public ip
+  hosts: all
+  vars_files:
+    - "{{ RC_PLAY_TOP }}/AWS/AWS-config.yml"
+  user: "{{ AWS_Image_User }}"
+  become: true
+  vars:
+    ansible_ssh_private_key_file: "{{ AWS_Private_Key_File }}"
+  tasks:
+    - name: Enable auto-assign public ip
+      ec2_vpc_subnet:
+        state: present
+        vpc_id: "{{ AWS_VPC }}"
+        cidr: "{{ AWS_VPC_PRV_CIDR }}"
+        map_public: true
+        region: "{{ AWS_Region }}"
+        aws_access_key: "{{ AWS_Access_Key }}"
+        aws_secret_key: "{{ AWS_Secret_Key }}"

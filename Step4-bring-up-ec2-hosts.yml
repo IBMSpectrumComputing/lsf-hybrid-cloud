@@ -1,0 +1,112 @@
+#
+#-----------------------------------
+# Copyright IBM Corp. 1992, 2017. All rights reserved.
+# US Government Users Restricted Rights - Use, duplication or disclosure
+# restricted by GSA ADP Schedule Contract with IBM Corp.
+#-----------------------------------
+#
+---
+
+# This playbook will bring up all the needed EC2 VMs and create a inventory file
+# for the next step in the process.
+
+- name: Should we use EC2 VPN node as part of the LSF Cluster
+  hosts: LSF_Masters[0]
+  vars_prompt:
+    - name: use_vpn
+      prompt: "\n****************************  Input Needed ****************************\n\nDo you want to use the EC2 VPN node as part of the LSF Cluster?  \nIn a Multi-Cluster deployment this will become the LSF Master.\n[y/n]? "
+      default: "y"
+      private: no
+
+    - name: num_ec2_vm
+      prompt: "\n****************************  Input Needed ****************************\n\nHow many additional EC2 nodes would you like to configure as\npart of the LSF Cluster?  "
+      default: 0
+      private: no
+
+  tasks:  
+    - include_vars: "inventory_ec2.yml"
+
+    - set_fact:
+        num_ec2_vm: "{{ num_ec2_vm }}"
+
+    - set_fact:
+        use_vpn: "{{ use_vpn }}"
+
+    - name: Validate input
+      fail:
+        msg: Either the VPN instance must be used for LSF or an additional EC2 instance must be started.  Restart playbook and use the VPN instance for LSF, or start 1 additional EC2 insrance
+      when:
+        - num_ec2_vm == 0
+        - use_vpn != y
+
+    - name: Users response
+      debug:
+        msg: "The VPN node (if present) will {% set out = '' %}{% if use_vpn != 'y' %}{% set out = 'not ' %}{{ out }}{% endif %}be used as a LSF server host."
+
+    - name: Users response 2
+      debug:
+        msg: "Going to start {{ num_ec2_vm }} EC2 VM to be LSF Servers."
+
+
+# --------------------------------------------------------------
+# ------------------  Bring up more LSF Servers  ---------------
+# --------------------------------------------------------------
+- name: Setup Cloud machines
+  hosts: LSF_Masters[0]
+  gather_facts: false
+  roles:
+    - make-ec2-server-nodes
+  tasks:
+    - name: Reload EC2 server inventory
+      include_vars: "inventory_ec2servers.yml"
+
+    - name: Make a hostgroup from the private IPs for later testing
+      add_host:
+        hostname: "{{ item.prv_ip }}"
+        groupname: prvec2grp
+      with_items: "{{ ec2servers }}"
+
+    - name: Make a hostgroup from the public IPs for configuration
+      add_host:
+        hostname: "{{ item.pub_ip }}"
+        # Dont change the groupname.  Needed within the tasks
+        groupname: pubec2grp
+      with_items: "{{ ec2servers }}"
+
+
+# --------------------------------------------------------------
+# ------------------    Configure EC2 VMs   --------------------
+# --------------------------------------------------------------
+- name: Configure the EC2 nodes for later LSF install
+  hosts: pubec2grp
+  vars_files:
+    - AWS/AWS-config.yml
+  user: "{{ AWS_Image_User }}"
+  become: true
+  gather_facts: true
+  vars:
+    ansible_ssh_private_key_file: "{{ AWS_Private_Key_File }}"
+
+  roles:
+    - prepare-ec2-servers
+
+
+# --------------------------------------------------------------
+# ------------------    Test the EC2 nodes  --------------------
+# --------------------------------------------------------------
+- name: Test ICMP ping of EC2 nodes private interface
+  hosts: LSF_Masters[0]
+  gather_facts: false
+  tasks:
+    - name: Try ICMP ping
+      shell:  ping -c 2 -w 5 "{{ item }}"
+      with_items: "{{ groups.prvec2grp }}"
+
+- name: Test access to the EC2 VMs private interfaces
+  hosts: prvec2grp
+  gather_facts: false
+  tasks:
+    - name: Ping Private network interfaces
+      ping:
+
+

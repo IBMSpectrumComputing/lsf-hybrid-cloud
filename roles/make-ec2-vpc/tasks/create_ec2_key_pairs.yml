@@ -1,0 +1,44 @@
+---
+#-----------------------------------
+# Copyright IBM Corp. 1992, 2017. All rights reserved.
+# US Government Users Restricted Rights - Use, duplication or disclosure
+# restricted by GSA ADP Schedule Contract with IBM Corp.
+#-----------------------------------
+
+- name: Running  create_ec2_key_pairs.yml
+  debug:
+    msg: "The EC2 key file {{ AWS_Key_Name }}.pem was not found.  Making one "
+
+- name: Remove any existing EC2 Key
+  ec2_key:
+    aws_access_key: "{{ AWS_Access_Key }}"
+    aws_secret_key: "{{ AWS_Secret_Key }}"
+    ec2_url: "{{ AWS_EC2_URL }}"
+    region: "{{ AWS_Region }}"
+    state: absent
+    name: "{{ AWS_Key_Name }}"
+  ignore_errors: True
+
+- name: Generate the EC2 Key
+  ec2_key:
+    aws_access_key: "{{ AWS_Access_Key }}"
+    aws_secret_key: "{{ AWS_Secret_Key }}"
+    ec2_url: "{{ AWS_EC2_URL }}"
+    region: "{{ AWS_Region }}"
+    state: present
+    name: "{{ AWS_Key_Name }}"
+  register: ec2key
+
+- name: Dump variables for debugging
+  template:
+    src: "{{ RC_PLAY_TOP }}/template/dumpall.j2"
+    dest: /tmp/ansible-vpc-keys
+  when: Debug_Tasks == true
+
+- name: Save the key into a pem file
+  blockinfile:
+    dest: "{{ RC_PLAY_TOP }}/AWS/{{ AWS_Key_Name }}.pem"
+    block: "{{ec2key.key.private_key}}"
+    create: yes
+    mode: 0400
+    marker: ''

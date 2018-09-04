@@ -1,0 +1,56 @@
+---
+#-----------------------------------
+# Copyright IBM Corp. 1992, 2017. All rights reserved.
+# US Government Users Restricted Rights - Use, duplication or disclosure
+# restricted by GSA ADP Schedule Contract with IBM Corp.
+#-----------------------------------
+
+- name: Running  create_routes.yml
+  debug:
+    msg: "Creating routes in VPC {{ AWS_VPC }} for subnet {{ AWS_VPC_PRV_Subnet }} "
+
+- name: Enable an Internet Gateway for this VPC and get its id
+  ec2_vpc_igw:
+    aws_access_key: "{{ AWS_Access_Key }}"
+    aws_secret_key: "{{ AWS_Secret_Key }}"
+    ec2_url: "{{ AWS_EC2_URL }}"
+    region: "{{ AWS_Region }}"
+    vpc_id: "{{ AWS_VPC }}"
+    state: present
+  register: igw
+
+- name: Create a VPC subnet routes so we can install prerequisites from the internet
+  ec2_vpc_route_table:
+    aws_access_key: "{{ AWS_Access_Key }}"
+    aws_secret_key: "{{ AWS_Secret_Key }}"
+    ec2_url: "{{ AWS_EC2_URL }}"
+    region: "{{ AWS_Region }}"
+    state: present
+    vpc_id: "{{ AWS_VPC }}"
+    subnets:
+      - "{{ AWS_VPC_PRV_Subnet }}"
+    routes:
+      - dest: 0.0.0.0/0
+        gateway_id: "{{ igw.gateway_id }}"
+    resource_tags:
+      Name: Public subnet Routes
+  register: pub_subnet_routes
+
+- name: Dump variables for debugging
+  template:
+    src: "{{ RC_PLAY_TOP }}/template/dumpall.j2"
+    dest: /tmp/ansible-vpc-routes
+  when: Debug_Tasks == true
+
+- name: Set public subnet route value in file
+  lineinfile:
+    dest: "{{ RC_PLAY_TOP }}/AWS/AWS-config.yml"
+    regexp: '^AWS_VPC_Routes:.*'
+    line: 'AWS_VPC_Routes: {{ pub_subnet_routes.route_table.id }}'
+
+- name: Set Internet Gateway value in file
+  lineinfile:
+    dest: "{{ RC_PLAY_TOP }}/AWS/AWS-config.yml"
+    regexp: '^AWS_VPC_IGW:.*'
+    line: 'AWS_VPC_IGW: {{ igw.gateway_id }}'
+

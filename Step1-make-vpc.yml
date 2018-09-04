@@ -1,0 +1,15 @@
+#
+#-----------------------------------
+# Copyright IBM Corp. 1992, 2017. All rights reserved.
+# US Government Users Restricted Rights - Use, duplication or disclosure
+# restricted by GSA ADP Schedule Contract with IBM Corp.
+#-----------------------------------
+#
+---
+
+- name: Create all the AWS artifacts from the data in AWS/AWS-config.yml
+  hosts: LSF_Masters[0]
+  gather_facts: false
+  roles:
+    - make-ec2-vpc
+

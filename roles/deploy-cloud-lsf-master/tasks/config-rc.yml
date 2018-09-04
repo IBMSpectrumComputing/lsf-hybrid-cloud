@@ -1,0 +1,146 @@
+---
+# -----------------------------------
+# #  Copyright IBM Corp. 1992, 2018. All rights reserved.
+# #  US Government Users Restricted Rights - Use, duplication or disclosure
+# #  restricted by GSA ADP Schedule Contract with IBM Corp.
+# # -----------------------------------
+
+# Change aws_enable.config file
+- name: Update aws_enable.config to define AWS_IAM_CREDENTIAL_ID
+  lineinfile:
+    dest: "{{ LSF_TOP }}/10.1/install/aws_enable.config"
+    state: present
+    insertafter: "^# AWS_IAM_CREDENTIAL_ID.*"
+    backup: yes
+    line: "AWS_IAM_CREDENTIAL_ID={{ AWS_Access_Key }}"
+
+- name: Update aws_enable.config to define AWS_IAM_CREDENTIAL_KEY
+  lineinfile:
+    dest: "{{ LSF_TOP }}/10.1/install/aws_enable.config"
+    state: present
+    insertafter: "^# AWS_IAM_CREDENTIAL_KEY.*"
+    backup: yes
+    line: "AWS_IAM_CREDENTIAL_KEY={{ AWS_Secret_Key }}"
+
+- name: Update aws_enable.config to define AWS_REGION 
+  lineinfile:
+    dest: "{{ LSF_TOP }}/10.1/install/aws_enable.config"
+    state: present
+    insertafter: "^# AWS_REGION.*"
+    backup: yes
+    line: "AWS_REGION={{ AWS_Region }}"
+
+# Generate aws template file
+- name: Create an awsprov_templates.json file
+  template:
+    src: files/awsprov_templates.json
+    dest: "{{ LSF_CONF_DIR }}/resource_connector/aws/conf"
+    follow: yes
+    backup: yes
+
+# Generate host provider file
+- name: Create a hostProviders.json file
+  template:
+    src: files/hostProviders.json
+    dest: "{{ LSF_CONF_DIR }}/resource_connector/"
+    follow: yes
+    backup: yes
+
+# Move the preProv file to /opt/ibm/lsfsuite/lsf/10.1/resource_connector/aws/scripts/
+- name: Create a pre-provison file for ebroker
+  template:
+    src: files/bringupLSF.sh
+    dest: "{{ LSF_TOP }}/10.1/resource_connector/aws/scripts/"
+    follow: yes
+    mode: '0755'
+    owner: lsfadmin
+
+# Modify aws_enable.sh
+# line 400: support multi cluster case
+# line 520: comment AWS_LSF_TOP
+# line 1080: comment update_user_data
+- name: Fix aws_enable.sh in line 400 to support multi-cluster
+  replace:
+    dest: "{{ LSF_TOP }}/10.1/install/aws_enable.sh"
+    regexp: '^LSF_CLUSTER_NAME=`.*'
+    replace: "LSF_CLUSTER_NAME=`get_clusters_name \"$LSF_ENVDIR/lsf.shared\" | awk -F' ' '{ print $1 }'`"
+
+- name: Fix aws_enable.sh in line 520 to comment AWS_LSF_TOP
+  replace:
+    dest: "{{ LSF_TOP }}/10.1/install/aws_enable.sh"
+    regexp: '^AWS_LSF_TOP=`.*'
+    replace: "AWS_LSF_TOP=\"AWS_LSF_TOP\""
+
+- name: Fix aws_enable.sh in line 1080 to comment update_user_data function
+  lineinfile:
+    dest: "{{ LSF_TOP }}/10.1/install/aws_enable.sh"
+    backrefs: yes
+    regexp: '^(update_user_data \"\$user_data_script\".*)'
+    line: '# \1'
+
+# Copy amazon pem file to conf/resource_connector/aws/data
+- name: Copy amazon pem file
+  copy:
+    src: "{{ AWS_Private_Key_File }}"
+    dest: "{{ LSF_CONF_DIR }}/resource_connector/aws/data/"
+
+# add LSF_MQ_BROKER_HOSTS into lsf.conf
+- name: Add LSF_MQ_BROKER_HOSTS in lsf.conf for mosquitto
+  lineinfile:
+    dest: "{{ LSF_CONF_DIR }}/lsf.conf"
+    state: present
+    line: "LSF_MQ_BROKER_HOSTS={{ ec2servers[0].prv_name }}"
+
+- name: Set the LSF_LOCAL_RESOURCES
+  lineinfile:
+    dest: "{{ LSF_TOP }}/conf/lsf.conf"
+    state: present
+    regexp: '^LSF_LOCAL_RESOURCES.*'
+    line: LSF_LOCAL_RESOURCES="[resource awshost]"
+
+- name: Enable aws by using aws_enable.sh
+  shell: ./aws_enable.sh -f aws_enable.config 
+  args:
+    chdir: "{{ LSF_TOP }}/10.1/install"
+    warn: False
+
+- name: Temporary solution to replace java with /opt/ibm/jre/bin/java
+  shell: sed -i "s/java/\/opt\/ibm\/jre\/bin\/java/" *.sh
+  args:
+    chdir: "{{ LSF_TOP }}/10.1/resource_connector/aws/scripts/"
+    warn: False
+
+- name: Copy playbook to aws lsf master
+  copy:
+    src: "{{ RC_PLAY_TOP }}/deploy-lsf-server.tar"
+    dest: "/opt/ibm/lsf_installer/"
+
+- name: Extract deploy-lsf-server.tar into /opt/ibm/lsf_installer/ 
+  unarchive:
+    src: "{{ RC_PLAY_TOP }}/deploy-lsf-server.tar"
+    dest: "/opt/ibm/lsf_installer/"
+
+- file:
+    path: /opt/ibm/lsf_installer/AWS/
+    owner: lsfadmin
+    group: lsfadmin
+    recurse: yes
+
+- name: Change RC_PLAY_TOP to /opt/ibm/lsf_installer
+  replace:
+    dest: /opt/ibm/lsf_installer/group_vars/all
+    regexp: '^RC_PLAY_TOP:.*'
+    replace: 'RC_PLAY_TOP: /opt/ibm/lsf_installer'
+
+- name: Change LSF_Masters to cloud lsf master
+  replace:
+    dest:  /opt/ibm/lsf_installer/lsf-inventory
+    regexp: '{{ groups.LSF_Masters[0] }}'
+    replace: '{{ groups.ec2servers[0] }}'
+
+- name: Enable VPC auto-assign public IP
+  shell: ansible-playbook -i lsf-inventory roles/deploy-cloud-lsf-master/tasks/modify-vpc-subnet.yml
+  args:
+    warn: no
+    chdir: /opt/ibm/lsf_installer
+

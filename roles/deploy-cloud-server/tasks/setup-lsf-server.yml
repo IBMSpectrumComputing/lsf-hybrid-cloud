@@ -1,0 +1,55 @@
+---
+# -----------------------------------
+#  Copyright IBM Corp. 1992, 2018. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+- name: Start installing LSF Prerequisites
+  debug:
+    msg: "Ansible OS is {{ ansible_os_family }}"
+
+- name: Ensure group "lsfadmin" exists
+  group:
+    name: lsfadmin
+    gid: 495
+    state: present
+
+- name: Add User lsfadmin
+  user:
+    name: lsfadmin
+    comment: "lsfadmin"
+    shell: /bin/bash
+    home: /home/lsfadmin
+    createhome: yes
+    password: "$6$f6eESttN4lToRaKy$1IWHwBeIn8VYE9PQPzWZDSvdEigUB.1g9wLyz0t/g1.Oa7ZkwVC0YTXRGqehjgVVZUf.bRuWkm8urjZEyfh2u0"
+    uid: 495
+    group: lsfadmin
+    state: present
+    update_password: always
+
+- name: Make LSF directory
+  file:
+    path: /opt/ibm
+    state: directory
+
+- name: Create fstab entry
+  lineinfile:
+    dest: /etc/fstab
+    regexp: "^{{ hostvars[groups.ec2servers[0]]['prv_ip'] }}:/opt/ibm.*" 
+    line: "{{ hostvars[groups.ec2servers[0]]['prv_ip'] }}:/opt/ibm     /opt/ibm         nfs     defaults 0 0"
+
+- name: Mount filesystem
+  shell: mount /opt/ibm
+  args:
+    warn: no
+  ignore_errors: yes
+
+- name: Install the lsf-nfs-support rpm
+  shell: rpm -i /opt/ibm/lsf-rpm-repo/lsf-nfs*.rpm
+  args:
+    warn: no
+  ignore_errors: yes
+
+
+ 

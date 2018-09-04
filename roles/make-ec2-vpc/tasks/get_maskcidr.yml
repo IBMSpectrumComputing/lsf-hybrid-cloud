@@ -1,0 +1,30 @@
+---
+#-----------------------------------
+# Copyright IBM Corp. 1992, 2017. All rights reserved.
+# US Government Users Restricted Rights - Use, duplication or disclosure
+# restricted by GSA ADP Schedule Contract with IBM Corp.
+#-----------------------------------
+
+- name: Convert to CIDR range
+  script: ../files/mask2cidr.sh "{{ CLIENT_NET }}" "{{ CLIENT_MASK }}"
+  register: client_cidr_out
+
+- name: Store CIDR
+  set_fact:
+    client_cidr: "{{ client_cidr_out.stdout_lines[0] }}"
+
+- name: Debug client CIDR
+  debug:
+    msg: "Converted {{ CLIENT_NET }} {{ CLIENT_MASK }} to: {{ client_cidr }}"
+
+- name: Convert SERVER to CIDR range
+  script: ../files/mask2cidr.sh "{{ SERVER_NET }}" "{{ SERVER_MASK }}"
+  register: server_cidr_out
+
+- name: Store SERVER CIDR
+  set_fact:
+    server_cidr: "{{ server_cidr_out.stdout_lines[0] }}"
+
+- name: Debug server CIDR
+  debug:
+    msg: "Converted {{ SERVER_NET }} {{ SERVER_MASK }} to: {{ server_cidr }}"

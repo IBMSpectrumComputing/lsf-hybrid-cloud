@@ -1,0 +1,57 @@
+---
+# -----------------------------------
+#  Copyright IBM Corp. 1992, 2018. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+- name: Provision the LSF Server Nodes
+  ec2:
+    aws_access_key: "{{ AWS_Access_Key }}"
+    aws_secret_key: "{{ AWS_Secret_Key }}"
+    key_name: "{{ AWS_Key_Name }}"
+    # Security Group
+    group_id: "{{ AWS_VPC_Security_Group }}"
+    ec2_url: "{{ AWS_EC2_URL }}"
+    instance_type: "{{ AWS_Instance_Type }}"
+    region: "{{ AWS_Region }}"
+    image: "{{ AWS_Image }}"
+    vpc_subnet_id: "{{ AWS_VPC_PRV_Subnet }}"
+    assign_public_ip: yes
+    wait: true
+    exact_count: "{{ num_ec2_vm }}"
+    source_dest_check: no
+    count_tag:
+      Name: DemoServer
+    instance_tags:
+      Name: Server-host
+  register: newec2servers
+  when: num_ec2_vm > 0
+
+- name: Dump variables for debugging
+  template:
+    src: template/dumpall.j2
+    dest: /tmp/ansible-variables3
+  when: Debug_Tasks
+
+- name: Create an inventory file  WARNING Assumes LSF_Master[0] is the Deployer
+  template:
+    src: "{{ RC_PLAY_TOP }}/template/inventory-ec2servers.j2"
+    dest: "{{ RC_PLAY_TOP }}/inventory_ec2servers.yml"
+    follow: yes
+
+- name: Wait for SSH to come up
+  wait_for:
+    host: "{{ item.public_dns_name }}"
+    port: 22
+    delay: 60
+    timeout: 320
+    state: started
+  with_items: "{{ newec2servers.instances }}"
+
+- name: Create a host file for the Cloud Servers
+  template:
+    src: "{{ RC_PLAY_TOP }}/template/hosts.j2"
+    dest: "{{ RC_PLAY_TOP }}/files/hosts.ec2"
+    follow: yes
+

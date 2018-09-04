@@ -1,0 +1,86 @@
+---
+# -----------------------------------
+#  Copyright IBM Corp. 1992, 2018. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+- name: Start installing LSF Prerequisites
+  debug:
+    msg: "Ansible OS is {{ ansible_os_family }}"
+
+# ed is required by aws_enable.sh
+# jq is required by bringupLSF.sh
+- name: Install Package Dependencies for LSF
+  package:
+    name: "{{ item }}"
+    state: latest
+  with_items:
+    - lsof
+    - which
+    - nfs-utils
+    - ed
+    - httpd
+    - createrepo
+    - jq
+  when: ansible_os_family == "RedHat"
+
+- name: Copy ssh key for deployer
+  copy:
+    src: files/id_rsa.pub
+    dest: /root/.ssh/
+
+- name: Update Authoried Keys
+  shell: cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys
+
+- name: Ensure group "lsfadmin" exists
+  group:
+    name: lsfadmin
+    gid: 495 #"{{ gid_obj.stdout }}"
+    state: present
+
+- name: Add User lsfadmin
+  user:
+    name: lsfadmin
+    comment: "lsfadmin"
+    shell: /bin/bash
+    home: /home/lsfadmin
+    createhome: yes
+    password: "$6$f6eESttN4lToRaKy$1IWHwBeIn8VYE9PQPzWZDSvdEigUB.1g9wLyz0t/g1.Oa7ZkwVC0YTXRGqehjgVVZUf.bRuWkm8urjZEyfh2u0"
+    uid: 495 #"{{ uid_obj.stdout }}"
+    group: lsfadmin
+    state: present
+    update_password: always
+
+- name: Make LSF package repo directory
+  file:
+   path: /var/www/html/lsf-rpm-repo
+   state: directory
+
+- name: Copy LSF rpms
+  copy:
+    src: "{{ item }}"
+    dest: /var/www/html/lsf-rpm-repo
+    owner: root
+    mode: 644
+  with_fileglob:
+    - files/rpms/*rpm
+
+- name: Create a repository from the copied rpms
+  shell: createrepo /var/www/html/lsf-rpm-repo
+
+- name: Create repository
+  yum_repository:
+    name: lsf
+    description: LSF install repository
+    baseurl: http://{{ groups.ec2servers[0] }}/lsf-rpm-repo
+    enabled: yes
+    gpgcheck: no
+    keepcache: 0
+    http_caching: none
+
+- name: Restart httpd
+  systemd:
+    name: httpd
+    state: restarted 
+

@@ -1,0 +1,78 @@
+---
+# -----------------------------------
+#  Copyright IBM Corp. 1992, 2018. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+# Modify the LSF lsf.shared file
+- name: Update lsf.shared to add Servers
+  lineinfile:
+    dest: "{{ LSF_CONF_DIR }}/lsf.shared"
+    backrefs: yes
+    state: present
+    regexp: '^ClusterName.*'
+    line: 'ClusterName     Servers                 # Keyword'
+    backup: yes
+
+- name: Update on-cloud cluster info with master host name into lsf.shared
+  lineinfile:
+    dest: "{{ LSF_CONF_DIR }}/lsf.shared"
+    state: present
+    backup: yes
+    regexp: "^{{ CLOUD_LSF_CLUSTER_NAME | default('myCloudCluster') }}.*"
+    line: '{{ CLOUD_LSF_CLUSTER_NAME | default("myCloudCluster") }} {{ ec2servers[0].prv_name}}'
+
+- name: Append on-premise cluster info to lsf.shared
+  lineinfile:
+    dest: "{{ LSF_CONF_DIR }}/lsf.shared"
+    state: present
+    insertbefore: "^End Cluster.*"
+    line: '{{ LOCAL_LSF_CLUSTER_NAME }}        {{ groups.LSF_Masters[0] }}'
+    backup: yes
+
+- name: Update LSF cluster file
+  lineinfile:
+    dest: "{{ LSF_CONF_DIR }}/lsf.cluster.{{ CLOUD_LSF_CLUSTER_NAME | default('myCloudCluster') }}"
+    state: present
+    insertafter: "^Begin Parameters.*"
+    backup: yes
+    line: "PRODUCTS=LSF_Make LSF_Base LSF_Manager LSF_MultiCluster"
+
+#update lsb.queue to add receive request queue
+- name: Update the lsb.queue file
+  blockinfile:
+    dest: "{{ LSF_CONF_DIR }}/lsbatch/{{ CLOUD_LSF_CLUSTER_NAME | default('myCloudCluster') }}/configdir/lsb.queues"
+    backup: yes
+    block: |
+      Begin Queue
+      QUEUE_NAME    = recOnprem
+      PRIORITY      = 40
+      RCVJOBS_FROM  = {{ LOCAL_LSF_CLUSTER_NAME }}
+      RC_HOSTS      = awshost
+      DESCRIPTION   = Sample Queue for receving onprem cluster request
+      End Queue
+
+- name: Update lsf.conf
+  lineinfile:
+    dest: "{{ LSF_CONF_DIR }}/lsf.conf"
+    backrefs: yes
+    regexp: '^(ENABLE_DYNAMIC_HOSTS.*)'
+    line: '# \1'
+    backup: yes
+
+- name: Update LSF cluster file
+  lineinfile:
+    dest: "{{ LSF_CONF_DIR }}/lsf.cluster.{{ CLOUD_LSF_CLUSTER_NAME | default('myCloudCluster') }}"
+    state: present
+    insertbefore: "^End Parameters.*"
+    backup: yes
+    line: "LSF_HOST_ADDR_RANGE=*.*.*.*"
+
+- name: Start LSF Daemons
+  systemd:
+    name: lsfd
+    state:  restarted
+    enabled: yes
+    daemon_reload: yes
+

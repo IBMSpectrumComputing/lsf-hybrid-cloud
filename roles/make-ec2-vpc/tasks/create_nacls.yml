@@ -1,0 +1,55 @@
+---
+#-----------------------------------
+# Copyright IBM Corp. 1992, 2017. All rights reserved.
+# US Government Users Restricted Rights - Use, duplication or disclosure
+# restricted by GSA ADP Schedule Contract with IBM Corp.
+#-----------------------------------
+
+- name: Running  create_nacls.yml
+  debug:
+    msg: "Creating Network ACL in VPC {{ AWS_VPC }} for subnet {{ AWS_VPC_PRV_Subnet }} "
+
+# Creating the VPC seems to create a default NACL.  If we create another
+# NACL it has the associated subnet, but is not the default.
+- name: Load the default Network ACL for VPC
+  ec2_vpc_nacl_facts:
+    aws_access_key: "{{ AWS_Access_Key }}"
+    aws_secret_key: "{{ AWS_Secret_Key }}"
+    region: "{{ AWS_Region }}"
+    filters:
+      'default': 'true'
+  register: default_nacls
+
+- name: Output the default NACL id
+  debug:
+    msg: "Found default NACL: {{ default_nacls.nacls[0].nacl_id }}"
+
+- name: "Create and associate private network with ACL"
+  ec2_vpc_nacl:
+    aws_access_key: "{{ AWS_Access_Key }}"
+    aws_secret_key: "{{ AWS_Secret_Key }}"
+    region: "{{ AWS_Region }}"
+    state: present
+    vpc_id: "{{ AWS_VPC }}"
+    name: My_LSF_VPC_NACL
+    subnets: "{{ AWS_VPC_PRV_Subnet }}"
+    ingress:
+        - [100, 'tcp', 'allow', '0.0.0.0/0', null, null, 22, 22]
+        - [300, 'icmp', 'allow', '0.0.0.0/0', 0, 8]
+        - [500, 'udp', 'allow', '0.0.0.0/0', null, null, 1194, 1194]
+        - [600, 'tcp', 'allow', '0.0.0.0/0', null, null, 32768, 65535]
+    egress:
+        - [100, 'all', 'allow', '0.0.0.0/0', null, null, null, null]
+  register: pub_nacl
+
+- name: Dump variables for debugging
+  template:
+    src: "{{ RC_PLAY_TOP }}/template/dumpall.j2"
+    dest: /tmp/ansible-vpc-nacls
+  when: Debug_Tasks == true
+
+- name: Set public subnet route value in file
+  lineinfile:
+    dest: "{{ RC_PLAY_TOP }}/AWS/AWS-config.yml"
+    regexp: '^AWS_VPC_NACLs:.*'
+    line: 'AWS_VPC_NACLs: {{ pub_nacl.nacl_id }}'

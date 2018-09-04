@@ -1,0 +1,24 @@
+---
+# -----------------------------------
+#  Copyright IBM Corp. 1992, 2018. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+- name: Export LSF directories 
+  debug:
+    msg: "Ansible OS is {{ ansible_os_family }}"
+
+- name: Set the exports
+  lineinfile:
+    dest: "/etc/exports"
+    state: present
+    line: "/opt/ibm {{ AWS_VPC_PRV_CIDR }}(rw,async,no_root_squash)"
+
+- name: Export filesystem
+  systemd:
+    name: nfs
+    state:  restarted
+    enabled: yes
+    daemon_reload: yes
+

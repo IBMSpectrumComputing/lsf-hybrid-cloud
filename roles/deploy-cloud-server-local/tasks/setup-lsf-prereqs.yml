@@ -1,0 +1,58 @@
+---
+# -----------------------------------
+#  Copyright IBM Corp. 1992, 2018. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+- name: Start installing LSF Prerequisites
+  debug:
+    msg: "Ansible OS is {{ ansible_os_family }}"
+
+- name: Install Package Dependencies for LSF
+  package:
+    name: "{{ item }}"
+    state: latest
+  with_items:
+    - lsof
+    - which
+    - nfs-utils
+    - createrepo
+  when: ansible_os_family == "RedHat"
+
+- name: Ensure group "lsfadmin" exists
+  group:
+    name: lsfadmin
+    gid: 495 
+    state: present
+
+- name: Add User lsfadmin
+  user:
+    name: lsfadmin
+    comment: "lsfadmin"
+    shell: /bin/bash
+    home: /home/lsfadmin
+    createhome: yes
+    password: "$6$f6eESttN4lToRaKy$1IWHwBeIn8VYE9PQPzWZDSvdEigUB.1g9wLyz0t/g1.Oa7ZkwVC0YTXRGqehjgVVZUf.bRuWkm8urjZEyfh2u0"
+    uid: 495 
+    group: lsfadmin
+    state: present
+    update_password: always
+
+- name: Create repository
+  yum_repository:
+    name: lsf
+    description: LSF install repository
+    baseurl: http://{{ groups.LSF_Masters[0] }}/lsf-rpm-repo
+    enabled: yes
+    gpgcheck: no
+    keepcache: 0
+    http_caching: none
+
+# The lsf-ego-server will pull in the lsf-server, lsf-client, lsf-conf
+- name: Enable LSF repo
+  yum:
+    name: lsf-ego-server
+    enablerepo: lsf
+    state: present
+

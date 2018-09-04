@@ -1,0 +1,134 @@
+---
+#-----------------------------------
+# Copyright IBM Corp. 1992, 2017. All rights reserved.
+# US Government Users Restricted Rights - Use, duplication or disclosure
+# restricted by GSA ADP Schedule Contract with IBM Corp.
+#-----------------------------------
+
+#- name: Update the lsb.modules file
+#  lineinfile:
+#    dest: "{{ LSF_CONF_DIR }}/lsbatch/{{ LOCAL_LSF_CLUSTER_NAME | default('myCluster') }}/configdir/lsb.modules"
+#    backup: yes
+#    backrefs: yes
+#    regexp: '^#(schmod_demand.*)'
+#    line: '\1'
+
+- name: Update the lsb.queue file
+  blockinfile:
+    dest: "{{ LSF_CONF_DIR }}/lsbatch/{{ LOCAL_LSF_CLUSTER_NAME | default('myCluster') }}/configdir/lsb.queues"
+    backup: yes
+    block: |
+      Begin Queue
+      QUEUE_NAME    = awsexample
+      PRIORITY      = 30
+      RERUNNABLE    = Y
+      RES_REQ       = awshost
+      INTERACTIVE   = NO
+      DESCRIPTION   = Sample Queue for running jobs on AWS
+      End Queue
+
+- name: Update lsf.shared
+  lineinfile:
+    dest: "{{ LSF_CONF_DIR }}/lsf.shared"
+    backrefs: yes
+    regexp: '^#.*(awshost.*)'
+    line: '   \1'
+    backup: yes
+
+- name: Update LSF cluster file
+  lineinfile:
+    dest: "{{ LSF_CONF_DIR }}/lsf.cluster.{{ LOCAL_LSF_CLUSTER_NAME | default('myCluster') }}"
+    state: present
+    insertafter: "^Begin Parameters.*"
+    backup: yes
+    line: "LSF_HOST_ADDR_RANGE=*.*.*.*"
+
+#- name: Update LSF lsf.conf add LSB_RC_EXTERNAL_HOST_FLAG
+#  lineinfile:
+#    dest: "{{ LSF_CONF_DIR }}/lsf.conf"
+#    state: present
+#    line: "LSB_RC_EXTERNAL_HOST_FLAG=awshost"
+#    backup: yes
+
+- name: Update LSF lsf.conf add ENABLE_DYNAMIC_HOSTS
+  lineinfile:
+    dest: "{{ LSF_CONF_DIR }}/lsf.conf"
+    state: present
+    line: "ENABLE_DYNAMIC_HOSTS=Y"
+
+- name: Update LSF lsf.conf add LSF_REG_FLOAT_HOSTS
+  lineinfile:
+    dest: "{{ LSF_CONF_DIR }}/lsf.conf"
+    state: present
+    line: "LSF_REG_FLOAT_HOSTS=Y"
+
+- name: Update LSF lsf.conf add LSF_DYNAMIC_HOST_WAIT_TIME
+  lineinfile:
+    dest: "{{ LSF_CONF_DIR }}/lsf.conf"
+    state: present
+    line: "LSF_DYNAMIC_HOST_WAIT_TIME=2"
+
+- name: Gather LSF_MASTER_LIST
+  shell: egrep "^LSF_MASTER_LIST" "{{ LSF_CONF_DIR }}/lsf.conf"
+  register: LSFMasters
+  ignore_errors: True
+  tags: mdebug
+
+- name: Set LSF_MASTER_LIST
+  set_fact:
+    LSF_MASTER_LIST: "{{ LSFMasters.stdout_lines[0] }}"
+  tags: mdebug
+
+- name: Display varaibles
+  debug:
+    msg: "LSFMasters.stdout_lines[0] = {{ LSFMasters.stdout_lines[0] }} \n LSF_MASTER_LIST = {{ hostvars[groups.LSF_Masters[0]]['LSF_MASTER_LIST'] }}"
+  tags: mdebug
+
+- name: Gather LSF_SERVER_HOSTS
+  shell: egrep "^LSF_SERVER_HOSTS" "{{ LSF_CONF_DIR }}/lsf.conf"
+  register: LSFServers
+  ignore_errors: True
+  # Reference with: LSF_SERVER_HOSTS_OUT.stdout_lines[0]
+
+- name: Set LSF_SERVER_HOSTS
+  set_fact:
+    LSF_SERVER_HOSTS: "{{ LSFServers.stdout_lines[0] }}"
+
+- name: Gather EGO_MASTER_LIST
+  shell: egrep "^EGO_MASTER_LIST" "{{ LSF_CONF_DIR }}/ego/myCluster/kernel/ego.conf"
+  register: EGOMasters
+  ignore_errors: True
+
+- name: Set EGO_MASTER_LIST
+  set_fact:
+    EGO_MASTER_LIST: "{{ EGOMasters.stdout_lines[0] }}"
+
+- name: Clear the hosts file
+  shell: grep -v "{{ SERVER_IP }}" hosts > hosts.WRK ; mv hosts.WRK hosts
+  args:
+    chdir "{{ LSF_CONF_DIR }}"
+  ignore_errors: True
+
+- name: Clear the hostcache
+  shell: grep -v awshost hostcache > hostcache.WRK ; mv hostcache.WRK hostcache ; chown lsfadmin hostcache
+  args:
+    chdir: "{{ LSF_WORK_DIR }}/{{ LOCAL_LSF_CLUSTER_NAME }}/ego/lim"
+  ignore_errors: True
+
+- name: Dump variables for debugging
+  template:
+    src: "{{ RC_PLAY_TOP }}/template/dumpall.j2"
+    dest: /tmp/ansible-lsf
+  when: Debug_Tasks == true
+
+- name: Create a host file
+  template:
+    src: "{{ RC_PLAY_TOP }}/template/hosts-lsf.j2"
+    dest: "{{ LSF_CONF_DIR }}/hosts"
+    follow: yes
+
+- name: Copy LSF host file to a common location
+  copy:
+    src: "{{ LSF_CONF_DIR }}/hosts"
+    dest: "{{ RC_PLAY_TOP }}/files/hosts-lsf"
+    follow: yes

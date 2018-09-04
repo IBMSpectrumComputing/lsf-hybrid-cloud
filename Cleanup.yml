@@ -1,0 +1,272 @@
+#
+#-----------------------------------
+# Copyright IBM Corp. 1992, 2017. All rights reserved.
+# US Government Users Restricted Rights - Use, duplication or disclosure
+# restricted by GSA ADP Schedule Contract with IBM Corp.
+#-----------------------------------
+#
+---
+
+- name: Delete the EC2 Instances
+  hosts: localhost
+  gather_facts: False
+  vars_prompt:
+    - name: user_del_vpc
+      prompt: "\n****************************  Input Needed ****************************\n\nDo you want to delete the VPC [y/n] ?"
+      default: "y"
+      private: no
+
+  tasks:
+    - include_vars: "AWS/AWS-config.yml"
+
+    - set_fact:
+        del_vpc: "{{ user_del_vpc }}"
+
+    - name: Check for inventory file
+      stat:
+        path: "{{ RC_PLAY_TOP }}/inventory_ec2servers.yml"
+      register: have_inv
+
+    - name: Reload EC2 server inventory
+      include_vars: "{{ RC_PLAY_TOP }}/inventory_ec2servers.yml"
+      when: have_inv.stat.exists == True
+
+    - name: Make a hostgroup from EC2 Servers
+      add_host:
+        hostname: "{{ item.pub_ip }}"
+        groupname: ec2servers
+      with_items: "{{ ec2servers }}"
+      when: have_inv.stat.exists == True
+
+    - name: Check for inventory file
+      stat:
+        path: "{{ RC_PLAY_TOP }}/inventory_ec2.yml"
+      register: have_vpninv
+
+    - name: Reload EC2 VPN inventory
+      include_vars: "{{ RC_PLAY_TOP }}/inventory_ec2.yml"
+      when: have_vpninv.stat.exists == True
+
+    - name: Make a hostgroup from the EC2 VPN node
+      add_host:
+        hostname: "{{ item.pub_ip }}"
+        groupname: ec2vpn
+      with_items: "{{ ec2vpn }}"
+      when: have_vpninv.stat.exists == True
+
+    - name: Delete Server Instances
+      ec2:
+        state: absent
+        aws_access_key: "{{ AWS_Access_Key }}"
+        aws_secret_key: "{{ AWS_Secret_Key }}"
+        key_name: "{{ AWS_Key_Name }}"
+        ec2_url: "{{ AWS_EC2_URL }}"
+        region: "{{ AWS_Region }}"
+        instance_ids: "{{ item.awsid }}"
+      with_items: "{{ ec2servers }}"
+      ignore_errors: True
+      when: have_inv.stat.exists == True
+
+    - name: Delete VPN Instance (Okay to fail)
+      ec2:
+        state: absent
+        aws_access_key: "{{ AWS_Access_Key }}"
+        aws_secret_key: "{{ AWS_Secret_Key }}"
+        key_name: "{{ AWS_Key_Name }}"
+        ec2_url: "{{ AWS_EC2_URL }}"
+        region: "{{ AWS_Region }}"
+        instance_ids: "{{ item.awsid }}"
+      with_items: "{{ ec2vpn }}"
+      ignore_errors: True
+      when: have_vpninv.stat.exists == True
+
+    - name: Wait for volumes to be free
+      pause:
+        seconds: 180
+      when: have_inv.stat.exists == True or have_vpninv.stat.exists == True
+
+    - name: Delete Server volumes
+      ec2_vol:
+        id: "{{ item.awsvol }}"
+        aws_access_key: "{{ AWS_Access_Key }}"
+        aws_secret_key: "{{ AWS_Secret_Key }}"
+        region: "{{ AWS_Region }}"
+        ec2_url: "{{ AWS_EC2_URL }}"
+        state: absent
+      with_items: "{{ ec2servers }}"
+      ignore_errors: True
+      when: have_inv.stat.exists == True
+
+    - name: Delete VPN volumes (Okay to fail)
+      ec2_vol:
+        id: "{{ item.awsvol }}"
+        aws_access_key: "{{ AWS_Access_Key }}"
+        aws_secret_key: "{{ AWS_Secret_Key }}"
+        region: "{{ AWS_Region }}"
+        ec2_url: "{{ AWS_EC2_URL }}"
+        state: absent
+      with_items: "{{ ec2vpn }}"
+      ignore_errors: True
+      when: have_vpninv.stat.exists == True
+
+    - name: Remove the inventory files
+      file: 
+        path: "{{ RC_PLAY_TOP }}/{{ item }}"
+        state: absent
+      with_items:
+        - "inventory_ec2.yml"
+        - "inventory_ec2servers.yml"
+
+    - name: Remove the support files
+      file:
+        path: "{{ RC_PLAY_TOP }}/files/{{ item }}"
+        state: absent
+      with_items:
+        - "group"
+        - "hosts"
+        - "hosts.ec2"
+        - "passwd"
+        - "shadow"
+        - "shadow.tmp"
+        - "fstab.append"
+        - "hosts-lsf"
+
+# ----------  Delete VPC  -------------
+    - name: Delete VPC private subnet
+      ec2_vpc_subnet:
+        aws_access_key: "{{ AWS_Access_Key }}"
+        aws_secret_key: "{{ AWS_Secret_Key }}"
+        ec2_url: "{{ AWS_EC2_URL }}"
+        region: "{{ AWS_Region }}"
+        state: absent
+        vpc_id: "{{ AWS_VPC }}"
+        cidr: "{{ AWS_VPC_PRV_CIDR }}"
+      when: 
+        - AWS_VPC_PRV_Subnet != "none"
+        - del_vpc == "y"
+
+    - name: Reset AWS_VPC_PRV_Subnet value in file
+      lineinfile:
+        dest: "{{ RC_PLAY_TOP }}/AWS/AWS-config.yml"
+        regexp: '^AWS_VPC_PRV_Subnet:.*'
+        line: 'AWS_VPC_PRV_Subnet: none'
+      when:
+        - AWS_VPC_PRV_Subnet != "none"
+        - del_vpc == "y"
+    
+    - name: Delete VPC subnet routes
+      ec2_vpc_route_table:
+        aws_access_key: "{{ AWS_Access_Key }}"
+        aws_secret_key: "{{ AWS_Secret_Key }}"
+        ec2_url: "{{ AWS_EC2_URL }}"
+        region: "{{ AWS_Region }}"
+        state: absent
+        vpc_id: "{{ AWS_VPC }}"
+        lookup: id
+        route_table_id: "{{ AWS_VPC_Routes }}"
+      when: 
+        - AWS_VPC_Routes != "none"
+        - del_vpc == "y"
+
+    - name: Reset AWS_VPC_Routes value in file
+      lineinfile:
+        dest: "{{ RC_PLAY_TOP }}/AWS/AWS-config.yml"
+        regexp: '^AWS_VPC_Routes:.*'
+        line: 'AWS_VPC_Routes: none'
+      when:
+        - AWS_VPC_Routes != "none"
+        - del_vpc == "y"
+
+    - name: "Delete the Security Group"
+      ec2_group:
+        aws_access_key: "{{ AWS_Access_Key }}"
+        aws_secret_key: "{{ AWS_Secret_Key }}"
+        ec2_url: "{{ AWS_EC2_URL }}"
+        region: "{{ AWS_Region }}"
+        state: absent
+        vpc_id: "{{ AWS_VPC }}"
+        name: My_LSF_VPC_SEC_GRP
+        description:  Allow SSH and OpenVPN
+        # group_id: "{{ AWS_VPC_Security_Group }}"
+      when: 
+        - AWS_VPC_Security_Group != "none"
+        - del_vpc == "y"
+
+    - name: Reset AWS_VPC_Security_Group value in file
+      lineinfile:
+        dest: "{{ RC_PLAY_TOP }}/AWS/AWS-config.yml"
+        regexp: '^AWS_VPC_Security_Group:.*'
+        line: 'AWS_VPC_Security_Group: none'
+      when:
+        - AWS_VPC_Security_Group != "none"
+        - del_vpc == "y"
+
+    - name: Delete Internet Gateway
+      ec2_vpc_igw:
+        aws_access_key: "{{ AWS_Access_Key }}"
+        aws_secret_key: "{{ AWS_Secret_Key }}"
+        ec2_url: "{{ AWS_EC2_URL }}"
+        region: "{{ AWS_Region }}"
+        vpc_id: "{{ AWS_VPC }}"
+        state: absent
+      when: 
+        - AWS_VPC_IGW != "none"
+        - del_vpc == "y"
+
+    - name: Reset AWS_VPC_IGW value in file
+      lineinfile:
+        dest: "{{ RC_PLAY_TOP }}/AWS/AWS-config.yml"
+        regexp: '^AWS_VPC_IGW:.*'
+        line: 'AWS_VPC_IGW: none'
+      when:
+        - AWS_VPC_IGW != "none"
+        - del_vpc == "y"
+  
+    - name: Delete Network ACL
+      ec2_vpc_nacl:
+        aws_access_key: "{{ AWS_Access_Key }}"
+        aws_secret_key: "{{ AWS_Secret_Key }}"
+        region: "{{ AWS_Region }}"
+        state: absent
+        name: My_LSF_VPC_NACL
+        vpc_id: "{{ AWS_VPC }}"
+      when:
+        - AWS_VPC_NACLs != "none"
+        - del_vpc == "y"
+
+    - name: Reset AWS_VPC_NACLs value in file
+      lineinfile:
+        dest: "{{ RC_PLAY_TOP }}/AWS/AWS-config.yml"
+        regexp: '^AWS_VPC_NACLs:.*'
+        line: 'AWS_VPC_NACLs: none'
+      when:
+        - AWS_VPC_NACLs != "none"
+        - del_vpc == "y"
+
+    - name: Delete VPC
+      ec2_vpc_net:
+        name: My_LSF_VPC
+        aws_access_key: "{{ AWS_Access_Key }}"
+        aws_secret_key: "{{ AWS_Secret_Key }}"
+        ec2_url: "{{ AWS_EC2_URL }}"
+        region: "{{ AWS_Region }}"
+        cidr_block: "{{ AWS_VPC_CIDR }}"
+        state: absent
+      when:
+        - AWS_VPC != "none"
+        - del_vpc == "y"
+
+    - name: Reset AWS_VPC value in file
+      lineinfile:
+        dest: "{{ RC_PLAY_TOP }}/AWS/AWS-config.yml"
+        regexp: '^AWS_VPC:.*'
+        line: 'AWS_VPC: none'
+      when:
+        - AWS_VPC != "none"
+        - del_vpc == "y"
+
+    - name: Reset files directory contents
+      shell: rm -rf "{{ RC_PLAY_TOP }}/files/rpms"
+      when:
+        - del_vpc == "y"
+ 

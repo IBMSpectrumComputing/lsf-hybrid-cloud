@@ -1,0 +1,83 @@
+---
+# -----------------------------------
+#  Copyright IBM Corp. 1992, 2018. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+- name: Get EPEL Repo rpm
+  get_url:
+    url: http://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+    dest: /root/epel-release-latest-7.noarch.rpm
+    force: no
+
+- name: Add EPEL Repo rpm
+  shell: rpm -ivh epel-release-latest-7.noarch.rpm
+  args:
+    chdir: /root
+    warn: False
+    creates: /etc/yum.repos.d/epel.repo
+
+- name: Start installing LSF Prerequisites
+  debug:
+    msg: "Ansible OS is {{ ansible_os_family }}"
+
+- name: Install Package Dependencies for LSF
+  package:
+    name: "{{ item }}"
+    state: latest
+  with_items:
+    - lsof
+    - which
+    - nfs-utils
+    - strace
+    - traceroute
+    - wireshark
+    - createrepo
+  when: ansible_os_family == "RedHat"
+
+- name: Check for existing authorized_keys
+  stat:
+    path: /root/authorized_keys
+  register: have_authorized_keys
+
+- name: Copy ssh key from deployer
+  copy:
+    src: files/id_rsa.pub
+    dest: /root/authorized_keys
+  when: have_authorized_keys.stat.exists == False
+
+- name: Update Authoried Keys
+  shell: cat /root/authorized_keys >> /root/.ssh/authorized_keys
+  when: have_authorized_keys.stat.exists == False
+
+#- name: Disable DNS hostname resolution on cloud machines
+  # Having it on messes up LSF because private IP's overlap with Amazon private IPs
+#  lineinfile:
+#    dest: "/etc/nsswitch.conf"
+#    state: present
+#    regexp: '^hosts.*'
+#    line: 'hosts:      files myhostname'
+
+- name: Reconfigure SSH
+  lineinfile:
+    dest: /etc/ssh/sshd_config
+    backrefs: yes
+    regexp: '^(PasswordAuthentication).*'
+    line: '\1 yes'
+
+- name: Restart Sshd
+  systemd:
+    name: sshd
+    state: restarted
+
+# The following routes are NOT for the VPN node
+- name: Add Route to the on premises network
+  shell: route add -net "{{ CLIENT_NET }}" netmask "{{ CLIENT_MASK }}" gw "{{ ec2vpn[0].prv_ip }}"
+  when:
+   - inventory_hostname != ec2vpn[0].pub_ip
+
+- name: Add Route to the VPN network
+  shell: route add -net "{{ SERVER_NET }}" netmask "{{ SERVER_MASK }}" gw "{{ ec2vpn[0].prv_ip }}"
+  when:
+   - inventory_hostname != ec2vpn[0].pub_ip

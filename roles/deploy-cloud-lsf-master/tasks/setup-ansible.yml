@@ -1,0 +1,70 @@
+---
+# -----------------------------------
+# #  Copyright IBM Corp. 1992, 2018. All rights reserved.
+# #  US Government Users Restricted Rights - Use, duplication or disclosure
+# #  restricted by GSA ADP Schedule Contract with IBM Corp.
+# # -----------------------------------
+#
+
+# install ansible which is used to install LSF for new machines
+- name: Install ansible package
+  package:
+    name: "{{ item }}"
+    state: latest
+  with_items:
+    - ansible
+    - python2-boto
+    - python2-boto3
+  when: ansible_os_family == "RedHat"
+
+- name: Set forks as 50 in ansible.cft 
+  lineinfile:
+    dest: "/etc/ansible/ansible.cfg"
+    state: present
+    insertafter: '^#forks'
+    line: 'forks= 50' 
+
+- name: Uncomment host_key_checking to disable SSH key host checking in ansible.cfg
+  lineinfile:
+    dest: "/etc/ansible/ansible.cfg"
+    state: present
+    regexp: '^#(host_key_checking.*)'
+    line: '\1' 
+    backrefs: yes
+
+- name: Change the default callback 
+  lineinfile:
+    dest: "/etc/ansible/ansible.cfg"
+    state: present
+    regexp: '^#(stdout_callback.*)'
+    line: '\1' 
+    backrefs: yes
+
+- name: Enable ansible log 
+  lineinfile:
+    dest: "/etc/ansible/ansible.cfg"
+    state: present
+    insertafter: '^#log_path'
+    line: 'log_path=/tmp/ansible.log' 
+
+- name: Create /tmp/ansible.log file
+  file:
+    path: /tmp/ansible.log
+    state: touch
+    mode: 0777
+
+- name: Disable retry files
+  lineinfile:
+    dest: "/etc/ansible/ansible.cfg"
+    state: present
+    regexp: '^#(retry_files_enabled.*)'
+    line: '\1' 
+    backrefs: yes
+
+- name: ssh arguments to use
+  lineinfile:
+    dest: "/etc/ansible/ansible.cfg"
+    state: present
+    regexp: '^#(ssh_args.*)'
+    line: '\1' 
+    backrefs: yes

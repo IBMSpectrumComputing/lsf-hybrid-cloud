@@ -1,0 +1,59 @@
+---
+#-----------------------------------
+# Copyright IBM Corp. 1992, 2017. All rights reserved.
+# US Government Users Restricted Rights - Use, duplication or disclosure
+# restricted by GSA ADP Schedule Contract with IBM Corp.
+#-----------------------------------
+
+- name: Get EPEL Repo rpm
+  get_url:
+    url: http://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+    dest: /root/epel-release-latest-7.noarch.rpm
+    force: no
+
+- name: Add EPEL Repo rpm
+  shell: rpm -ivh epel-release-latest-7.noarch.rpm
+  args:
+    chdir: /root
+    warn: False
+    creates: /etc/yum.repos.d/epel.repo
+
+- name: Install OpenVPN package
+  package:
+    name: "{{ item }}"
+    state: latest
+  with_items:
+    - openvpn
+  when: ansible_os_family == "RedHat"
+
+- name: Get easyrsa old version
+  get_url:
+    url: https://github.com/OpenVPN/easy-rsa-old/archive/2.3.3.tar.gz
+    dest: /tmp/easyrsa
+    force: no
+
+- name: Extract easyrsa
+  shell: tar zxf /tmp/easyrsa
+  args:
+    chdir: /tmp/
+    creates: /tmp/easy-rsa-old-2.3.3/COPYRIGHT.GPL
+    warn: False
+
+- name: Make the easyrsa openvpn dir
+  file: 
+    path: /etc/openvpn/easy-rsa
+    state: directory
+    mode: 0755
+
+- name: Copy contents to openvpn dir
+  shell: cp -rf /tmp/easy-rsa-old-2.3.3/easy-rsa/2.0/* /etc/openvpn/easy-rsa
+  args:
+    warn: False
+    creates: /etc/openvpn/easy-rsa/build-ca
+
+- name: Key directory
+  file:
+    path: "/etc/openvpn/keys"
+    recurse: yes
+    state: directory
+

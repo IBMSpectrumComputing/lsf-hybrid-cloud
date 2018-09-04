@@ -1,0 +1,12 @@
+---
+# -----------------------------------
+#  Copyright IBM Corp. 1992, 2018. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+- include: setup-lsf-prereqs.yml
+- include: install-lsf.yml
+- include: change-clustername.yml
+- include: setup-lsf-postreqs.yml
+- include: config-lsf-server.yml

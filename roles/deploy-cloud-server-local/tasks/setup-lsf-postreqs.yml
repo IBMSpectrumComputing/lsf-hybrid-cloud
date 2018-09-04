@@ -1,0 +1,51 @@
+---
+# -----------------------------------
+#  Copyright IBM Corp. 1992, 2018. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+# Modify the LSF lsf.conf file
+- name: Set the LSF_MASTER_LIST
+  lineinfile: 
+    dest: "{{ LSF_TOP }}/conf/lsf.conf"
+    state: present
+    regexp: '^LSF_MASTER_LIST.*'
+    line: "{{ hostvars[groups.LSF_Masters[0]]['LSF_MASTER_LIST'] }}"
+
+- name: Set the LSF_LOCAL_RESOURCES
+  lineinfile:
+    dest: "{{ LSF_TOP }}/conf/lsf.conf"
+    state: present
+    regexp: '^LSF_LOCAL_RESOURCES.*'
+    line: LSF_LOCAL_RESOURCES="[resource awshost]"
+
+- name: Set LSF_GET_CONF=lim
+  lineinfile:
+    dest: "{{ LSF_TOP }}/conf/lsf.conf"
+    state: present
+    regexp: '^LSF_GET_CONF.*'
+    line: "LSF_GET_CONF=lim"
+
+- name: Set the EGO_MASTER_LIST
+  lineinfile:
+    dest: "{{ LSF_TOP }}/conf/ego/{{ CLOUD_LSF_CLUSTER_NAME | default('myCloudCluster') }}/kernel/ego.conf"
+    state: present
+    regexp: '^EGO_MASTER_LIST.*'
+    line: "{{ hostvars[groups.LSF_Masters[0]]['EGO_MASTER_LIST'] }}"
+
+- name: Fix the master_hosts list
+  lineinfile:
+    dest: "{{ LSF_TOP }}/conf/lsbatch/{{ CLOUD_LSF_CLUSTER_NAME | default('myCloudCluster') }}/configdir/lsb.hosts"
+    backup: yes
+    backrefs: yes
+    regexp: '^(master_hosts.*)'
+    line: '# \1'
+
+- name: Start LSF Daemons
+  systemd:
+    name: lsfd
+    state:  restarted
+    enabled: yes
+    daemon_reload: yes
+ 

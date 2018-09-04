@@ -1,0 +1,32 @@
+---
+#-----------------------------------
+# Copyright IBM Corp. 1992, 2017. All rights reserved.
+# US Government Users Restricted Rights - Use, duplication or disclosure
+# restricted by GSA ADP Schedule Contract with IBM Corp.
+#-----------------------------------
+
+- name: Running  create_subnets.yml
+  debug:
+    msg: "Creating subnets in VPC {{ AWS_VPC }} "
+
+- name: Create a VPC private subnet
+  ec2_vpc_subnet:
+    aws_access_key: "{{ AWS_Access_Key }}"
+    aws_secret_key: "{{ AWS_Secret_Key }}"
+    ec2_url: "{{ AWS_EC2_URL }}"
+    region: "{{ AWS_Region }}"
+    state: present
+    vpc_id: "{{ AWS_VPC }}"
+    cidr: "{{ AWS_VPC_PRV_CIDR }}"
+    #(added in ansible 2.4)
+    # map_public:true
+    resource_tags:
+      Name: Private subnet
+  register: private_subnet
+
+- name: Set pravate subnet ID value in file
+  lineinfile:
+    dest: "{{ RC_PLAY_TOP }}/AWS/AWS-config.yml"
+    regexp: '^AWS_VPC_PRV_Subnet:.*'
+    line: 'AWS_VPC_PRV_Subnet: {{ private_subnet.subnet.id }}'
+

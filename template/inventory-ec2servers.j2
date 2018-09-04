@@ -1,0 +1,19 @@
+---
+# EC2 inventory information
+# Generated file.  Do not edit (unless you know what you are doing) ;)
+
+ec2servers:
+{% set list1 = [] %}
+{% if ec2vpn and ( use_vpn == 'y' or use_vpn == 'Y') %}
+{% if list1.append( {"name": ec2vpn[0].name, "pub_ip": ec2vpn[0].pub_ip, "prv_ip": ec2vpn[0].prv_ip, "awsid": ec2vpn[0].awsid, "prv_name": ec2vpn[0].prv_name, "awsvol": ec2vpn[0].awsvol, "isvpn": "yes" } ) %}{% endif %}
+{% endif %}
+{% if newec2servers and newec2servers.instances %}
+{% for i in newec2servers.instances %}
+{% set dev=i.block_device_mapping %}
+{% set volid=dev['/dev/sda1'].volume_id %}
+{% if list1.append( {"name": i.public_dns_name, "pub_ip": i.public_ip, "prv_ip": i.private_ip, "prv_name": i.private_dns_name, "awsid": i.id, "awsvol": volid, "isvpn": "no" } ) %}{% endif %}
+{{ list1 | to_yaml }}
+{%- endfor %}
+{% else %}
+{{ list1 | to_yaml }}
+{% endif %}

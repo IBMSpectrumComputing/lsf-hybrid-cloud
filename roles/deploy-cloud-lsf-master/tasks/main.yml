@@ -1,0 +1,15 @@
+---
+# -----------------------------------
+#  Copyright IBM Corp. 1992, 2018. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+- include: setup-lsf-prereqs.yml
+- include: install-lsf.yml
+- include: change-clustername.yml
+# ansible to be used by resource connect to bring up LSF environment
+- include: setup-ansible.yml
+- include: config-rc.yml
+- include: config-multi-cluster.yml
+- include: export-lsf.yml

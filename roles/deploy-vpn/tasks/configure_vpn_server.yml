@@ -1,0 +1,194 @@
+---
+#-----------------------------------
+# Copyright IBM Corp. 1992, 2017. All rights reserved.
+# US Government Users Restricted Rights - Use, duplication or disclosure
+# restricted by GSA ADP Schedule Contract with IBM Corp.
+#-----------------------------------
+
+- name: Show OS
+  debug:
+    msg: "Ansible OS {{ ansible_os_family }}"
+
+- name: Get EPEL Repo rpm
+  get_url:
+    url: http://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+    dest: /root/epel-release-latest-7.noarch.rpm
+    force: no
+
+- name: Add EPEL Repo rpm
+  shell: rpm -ivh epel-release-latest-7.noarch.rpm
+  args:
+    chdir: /root
+    warn: False
+    creates: /etc/yum.repos.d/epel.repo
+
+- name: Install Dependencies
+  package:
+    name: "{{ item }}"
+    state: latest
+  with_items:
+    - openvpn
+    - iptables-services
+    - wireshark
+    - lsof
+    - which
+    - nfs-utils
+    - createrepo
+  when: ansible_os_family == "RedHat"
+
+- name: Get easyrsa old version
+  get_url:
+    url: https://github.com/OpenVPN/easy-rsa-old/archive/2.3.3.tar.gz
+    dest: /tmp/easyrsa
+    force: no
+
+- name: Extract easyrsa
+  shell: tar zxf /tmp/easyrsa
+  args:
+    chdir: /tmp/
+    creates: /tmp/easy-rsa-old-2.3.3/COPYRIGHT.GPL
+    warn: False
+
+- name: Make the easyrsa openvpn dir
+  shell: mkdir /etc/openvpn/easy-rsa
+  args:
+    warn: False
+
+- name: Copy contents to openvpn dir
+  shell: cp -rf /tmp/easy-rsa-old-2.3.3/easy-rsa/2.0/* /etc/openvpn/easy-rsa
+  args:
+    warn: False
+
+- name: Create Key directory
+  file:
+    path: "/etc/openvpn/keys"
+    recurse: yes
+    state: directory
+
+- name: Create ccd directory
+  file:
+    path: "/etc/openvpn/ccd"
+    recurse: yes
+    state: directory
+
+- name: Add route to ccd file
+  lineinfile:
+    dest: /etc/openvpn/ccd/client
+    # The clients CN is "client"
+    state: present
+    create: yes
+    line: "iroute {{ CLIENT_NET }} {{ CLIENT_MASK }}"
+
+- name: Copy VPN file myvpn.tlsauth
+  copy:
+    src: "{{ RC_PLAY_TOP }}/VPN/myvpn.tlsauth"
+    dest: /etc/openvpn/myvpn.tlsauth
+    mode: 0400
+
+- name: Copy VPN server file ca.crt
+  copy:
+    src: "{{ RC_PLAY_TOP }}/VPN/ca.crt"
+    dest: /etc/openvpn/keys/ca.crt
+
+- name: Copy VPN server file dh2048.pem
+  copy:
+    src: "{{ RC_PLAY_TOP }}/VPN/dh2048.pem"
+    dest: /etc/openvpn/keys/dh2048.pem
+
+- name: Copy VPN server file server.key
+  copy:
+    src: "{{ RC_PLAY_TOP }}/VPN/server.key"
+    dest: /etc/openvpn/keys/server.key
+    mode: 0400
+
+- name: Copy VPN server file server.crt
+  copy:
+    src: "{{ RC_PLAY_TOP }}/VPN/server.crt"
+    dest: /etc/openvpn/keys/server.crt
+
+- name: Copy VPN server file server.conf
+  copy:
+    src: "{{ RC_PLAY_TOP }}/VPN/server.conf"
+    dest: /etc/openvpn/server.conf
+
+- name: Push route to client in OpenVPN config file
+  blockinfile:
+    dest: /etc/openvpn/server.conf
+    backup: yes
+    insertafter: '^;push "route 192.168.20.0 255.255.255.0"'
+    block: |
+      # LSF  - Add a line for the VPN network
+      push "route {{ SERVER_NET }} {{ SERVER_MASK }}"
+      # LSF  - Also add a line for the AWS private network
+      push "route {{ AWS_VPC_PRV_CIDR | replace('/24', '') }} 255.255.255.0" 
+
+- name: Config server mode and supply a VPN subnet to OpenVPN config file
+  lineinfile:
+    dest: /etc/openvpn/server.conf
+    state: present
+    line: "server {{ SERVER_NET }} {{ SERVER_MASK }}"
+
+- name: Add route to OpenVPN config file
+  lineinfile:
+    dest: /etc/openvpn/server.conf
+    state: present
+    line: "route {{ CLIENT_NET }} {{ CLIENT_MASK }}"
+
+
+- name: Enable IP forwarding
+  shell: echo 1 > /proc/sys/net/ipv4/ip_forward
+  args:
+    warn: False
+
+- name: Copy IPtables config file.  Iptables module is preview state
+  template:
+    src: "{{ RC_PLAY_TOP }}/template/iptables"
+    dest: /etc/sysconfig/iptables
+
+#- name: Enable OpenVPN port
+#  iptables:
+#    action: insert
+#    chain: INPUT
+#    jump: ACCEPT
+#    protocol: udp
+#    destination_port: 1194
+
+#- name: Enable TUN interface input
+#  iptables:
+#    action: insert
+#    chain: INPUT
+#    in_interface: tun+
+#    jump: ACCEPT
+
+#- name: Enable TUN interface forwarding
+#  iptables:
+#    action: insert
+#    chain: FORWARD
+#    in_interface: tun+
+#    jump: ACCEPT
+
+- name: Startup the IPTables service
+  systemd:
+    state: restarted
+    enabled: yes
+    daemon_reload: yes
+    name: iptables.service
+
+- name: Startup VPN service
+  systemd:
+    state: restarted
+    enabled: yes
+    daemon_reload: yes
+    name: openvpn@server.service
+
+- name: Reconfigure SSH
+  lineinfile:
+    dest: /etc/ssh/sshd_config
+    backrefs: yes
+    regexp: '^(PasswordAuthentication).*'
+    line: '\1 yes'
+
+- name: Restart Sshd
+  systemd:
+    name: sshd
+    state: restarted

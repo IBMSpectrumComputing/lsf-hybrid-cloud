@@ -1,0 +1,30 @@
+#-----------------------------------
+# Copyright IBM Corp. 1992, 2017. All rights reserved.
+# US Government Users Restricted Rights - Use, duplication or disclosure
+# restricted by GSA ADP Schedule Contract with IBM Corp.
+#-----------------------------------
+#
+---
+
+- name: Setup the AWS API prerequisites.  NOTE...  Needs Internet access
+  hosts: LSF_Masters[0]
+  tasks:
+
+    - include_vars: "AWS/AWS-config.yml"
+
+    - name: Check AWS keys
+      fail:
+        msg: The AWS_Access_Key is undefined!  Edit the AWS/AWS-config.yml and set it
+      when:
+        - ( AWS_Access_Key | length == 0 )
+      run_once: True
+
+  tags: config-deployer
+
+- name: Setup the AWS API prerequisites.  NOTE...  Needs Internet access
+  hosts: LSF_Masters[0]
+  roles:
+    - prep-deployer
+  tags: config-deployer
+
+  

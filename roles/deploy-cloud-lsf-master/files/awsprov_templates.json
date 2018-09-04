@@ -1,0 +1,21 @@
+{
+    "templates": [
+        {
+            "templateId": "CENTOS-Template-VM-1",
+            "maxNumber": 2,
+            "attributes": {
+                "type": ["String", "X86_64"],
+                "ncores": ["Numeric", "1"],
+                "ncpus": ["Numeric", "1"],
+                "mem": ["Numeric", "1024"],
+                "awshost": ["Boolean", "1"]
+            },
+            "imageId": "{{ AWS_Image }}",
+            "subnetId": "{{ AWS_VPC_PRV_Subnet }}",
+            "keyName": "{{ AWS_Key_Name }}",
+            "vmType": "{{ AWS_Instance_Type }}",
+            "securityGroupIds": ["{{ AWS_VPC_Security_Group }}"],
+            "userData": "zone={{ AWS_Region }}"
+        }
+    ]
+}

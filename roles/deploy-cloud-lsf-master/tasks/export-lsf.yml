@@ -1,0 +1,33 @@
+---
+# -----------------------------------
+#  Copyright IBM Corp. 1992, 2018. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+- name: Make LSF package repo directory
+  file:
+    path: /opt/ibm/lsf-rpm-repo/
+    state: directory
+
+- name: Copy lsf-nfs*.rpm to /opt/ibm/lsf-rpm-repo/
+  shell: cp /var/www/html/lsf-rpm-repo/lsf-nfs*.rpm /opt/ibm/lsf-rpm-repo/
+  ignore_errors: True
+  
+- name: Export LSF directories 
+  debug:
+    msg: "Ansible OS is {{ ansible_os_family }}"
+
+- name: Set the exports
+  lineinfile:
+    dest: "/etc/exports"
+    state: present
+    line: "/opt/ibm {{ AWS_VPC_PRV_CIDR }}(rw,async,no_root_squash)"
+
+- name: Export filesystem
+  systemd:
+    name: nfs
+    state:  restarted
+    enabled: yes
+    daemon_reload: yes
+

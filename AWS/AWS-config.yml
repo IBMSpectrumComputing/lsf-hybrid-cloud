@@ -1,0 +1,85 @@
+---
+
+# What type of cluster to deploy.  Uncomment one of these
+#multi_cluster: true
+hybrid_cluster: true
+
+# Set region to the AWS region to deploy on
+AWS_Region: us-east-2
+
+# Set the access key and secret key for your root AWS account
+AWS_Access_Key:
+AWS_Secret_Key:
+
+# The size of the instance to make
+AWS_Instance_Type: t2.micro
+
+# Set image to the AMI you want to build from.  The default
+# provided is CentOS 7.  Also set the default uses for the
+# image.
+AWS_Image: ami-77724e12
+AWS_Image_User: centos
+
+# Set the CIDR block for the VPC.  Note this block must not overlap with
+# any on premises networks, and the VPN network.
+AWS_VPC_CIDR: 10.1.0.0/16
+
+# Set the CIDR block for the Private subnet in the VPC.  Note this block 
+# must not overlap with VPC private subnet
+AWS_VPC_PRV_CIDR: 10.1.1.0/24
+
+# The URL of the AWS EC2 api 
+AWS_EC2_URL: https://ec2.amazonaws.com
+
+# The on premises subnet that will be given access to the
+# cloud subnet.
+CLIENT_NET: 10.10.10.0
+CLIENT_MASK: 255.255.255.0
+
+# The VPN server private IP on the tun0 interface
+# This is not the cloud subnet, this is only for the VPN
+SERVER_IP: 10.0.11.1
+SERVER_NET: 10.0.11.0
+SERVER_MASK: 255.255.255.0
+
+
+# ---------------------------------------------------------------------
+# -----                   WARNING                                 -----
+# ---------------------------------------------------------------------
+# The values below are set automatically by the "Step1-make-vpc.yml" 
+# playbook as it runs the various tasks.  If you are using an existing
+# VPC then override the values below.
+
+# This is the ID of the VPC to use for the LSF instances.  
+# Starts with "vpc-".  Initial value is "none"
+AWS_VPC: none
+
+# Set the VPC subnet id to the private subnet of the VPC
+# Starts with "subnet-".  Initial value is "none"
+AWS_VPC_PRV_Subnet: none
+
+# Set to the VPC Internet Gateway ID value.
+# Starts with "igw-".  Initial value is "none"
+AWS_VPC_IGW: none
+
+# Set to the VPC route ID.
+# starts with "rtb-".  Initial value is "none"
+AWS_VPC_Routes: none
+
+# Set to the Network ACLs ID to use.
+# Starts with "acl-".  Initial value is "none"
+AWS_VPC_NACLs: none
+
+# The group ID of the Security group that allows SSH in
+# As part of the VPC setup create a security group that allows
+# ssh in. Starts with "sg-".  Initially set to:  none
+AWS_VPC_Security_Group: none
+
+
+# Set to the name of the SSH key you generated for your user
+# Remember to download the associated "*.pem" file and put it in the 
+# AWS directory.
+AWS_Key_Name: MyAmazonKeyPair
+
+# The location of the "*.pem" file associated with above. 
+AWS_Private_Key_File: "./AWS/{{ AWS_Key_Name }}.pem"

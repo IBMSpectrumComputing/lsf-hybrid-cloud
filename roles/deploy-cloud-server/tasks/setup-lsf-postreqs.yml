@@ -1,0 +1,34 @@
+---
+# -----------------------------------
+#  Copyright IBM Corp. 1992, 2018. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+- name: Copy the hosts file over
+  copy:
+    src: "{{ RC_PLAY_TOP }}/files/hosts.ec2"
+    dest: /etc
+    owner: root
+    mode: 644
+
+- name: Update the hosts file
+  copy:
+    dest: "{{ LSF_CONF_DIR }}/hosts"
+    src: "{{ RC_PLAY_TOP }}/files/hosts-lsf"
+    follow: yes
+
+- name: Disable DNS hostname resolution on cloud machines
+  # Having it on messes up LSF because private IP's overlap with Amazon private IPs
+  lineinfile:
+    dest: "/etc/nsswitch.conf"
+    state: present
+    regexp: '^hosts.*'
+    line: 'hosts:      files myhostname'
+
+- name: Register host with LSF Master
+  script: ../files/register-host.sh
+  args:
+    executable: /bin/sh
+
+ 

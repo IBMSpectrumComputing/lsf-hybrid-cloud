@@ -1,0 +1,19 @@
+---
+#-----------------------------------
+# Copyright IBM Corp. 1992, 2017. All rights reserved.
+# US Government Users Restricted Rights - Use, duplication or disclosure
+# restricted by GSA ADP Schedule Contract with IBM Corp.
+#-----------------------------------
+
+# Prepare the Deployer to install parts on AWS
+- include: setup-deployer.yml
+
+- include: setup-lsf-master-repo.yml
+  when:
+    - multi_cluster is defined
+    - multi_cluster == true
+
+- include: setup-lsf-server-repo.yml
+  when: 
+    - hybrid_cluster is defined
+    - hybrid_cluster == true

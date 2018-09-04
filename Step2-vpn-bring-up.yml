@@ -1,0 +1,78 @@
+#
+#-----------------------------------
+# Copyright IBM Corp. 1992, 2017. All rights reserved.
+# US Government Users Restricted Rights - Use, duplication or disclosure
+# restricted by GSA ADP Schedule Contract with IBM Corp.
+#-----------------------------------
+#
+---
+
+- name: Install the OpenVPN prerequisites first
+  hosts: LSF_Masters[0]
+  gather_facts: true
+  roles:
+    - prep-lsf-master-vpn
+
+- name: Check for needed VPN config files
+  hosts: LSF_Masters[0]
+  gather_facts: false
+  tasks:  
+    - name: Check for client.ovpn file
+      stat:
+        path: "{{ RC_PLAY_TOP }}/VPN/client.ovpn"
+      register: have_client
+
+    - name: Check for server.conf file
+      stat:
+        path: "{{ RC_PLAY_TOP }}/VPN/server.conf"
+      register: have_server
+
+    - name: Check for myvpn.tlsauth file
+      stat:
+        path: "{{ RC_PLAY_TOP }}/VPN/myvpn.tlsauth"
+      register: have_tlsauth
+
+    - name: Check for server.key file
+      stat:
+        path: "{{ RC_PLAY_TOP }}/VPN/server.key"
+      register: have_srvkey
+
+    - name: Stop deployment so VPN keys and cert can be generated
+      fail: 
+        msg: Generate the VPN config files and re-run this again.  See the instructions in the VPN/README
+      when: have_client.stat.exists == False or have_server.stat.exists == False or have_tlsauth.stat.exists == False or have_srvkey.stat.exists == False
+
+- name: Bring-up first EC2 node and configure on-prem side vpn
+  hosts: LSF_Masters[0]
+  gather_facts: true
+  roles:
+    - make-ec2-first-node
+    - deploy-lsf-master-vpn
+
+- name: Configure EC2 main instance
+  hosts: vpn_host
+  gather_facts: true
+  vars_files: 
+    - AWS/AWS-config.yml
+  vars:
+    ansible_ssh_private_key_file: "{{ AWS_Private_Key_File }}"
+  user: "{{ AWS_Image_User }}"
+  become: true
+  roles:
+    - deploy-vpn
+
+# Verify that the VPN connection is up
+- name: Test VPN connection
+  hosts: LSF_Masters[0]
+  gather_facts: false
+  tasks:
+    - include_vars: "AWS/AWS-config.yml"
+
+    - name: Check VPN connection by pinging from on premises machine to EC2 machine
+      ping:
+        data: "{{ SERVER_IP }}"
+      register: pinged
+      until: pinged.ping.find("success")
+      retries: 12
+      delay: 5
+

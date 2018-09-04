@@ -1,0 +1,16 @@
+# EC2 hosts 
+# Generated file.  Do not edit (unless you know what you are doing) ;)
+
+{% if ec2vpn and ( use_vpn == 'y' or use_vpn == 'Y') %}
+{% set vname = ec2vpn[0].prv_name %}
+{% set vlist = vname.split('.') %}
+{{ ec2vpn[0].prv_ip }} {{ vlist[0] }} {{ ec2vpn[0].prv_name }}
+{% endif %}
+{% if newec2servers and newec2servers.instances %}
+{% for i in newec2servers.instances %}
+{% set hv = i.private_dns_name %}
+{% set nlist = hv.split('.') %}
+{{ '#' }} {{ i.public_ip }} {{ nlist[0] }} {{ i.public_dns_name }} 
+{{ i.private_ip }} {{ nlist[0] }} {{ i.private_dns_name }}
+{%- endfor %}
+{% endif %}

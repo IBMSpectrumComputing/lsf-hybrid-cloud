@@ -1,0 +1,40 @@
+#
+#-----------------------------------
+# Copyright IBM Corp. 1992, 2017. All rights reserved.
+# US Government Users Restricted Rights - Use, duplication or disclosure
+# restricted by GSA ADP Schedule Contract with IBM Corp.
+#-----------------------------------
+#
+---
+
+- name: Gather the Users, Groups and Hosts from the LSF Master 
+  hosts: LSF_Masters[0]
+  tasks:
+    - include_vars: "AWS/AWS-config.yml"
+  roles:
+    - gather-local-env
+
+- name: Read in EC2 inventory file and assemble a host list
+  hosts: LSF_Masters[0]
+  tasks:
+    - include_vars: "inventory_ec2.yml"
+    
+    - name: Make the ec2vpn host list
+      add_host:
+        hostname: "{{ item.prv_ip }}"
+        groupname: ec2vpn
+      with_items: "{{ ec2vpn }}"
+
+- name: Push the config to the EC2 nodes
+  hosts: ec2vpn
+  vars_files:
+    - AWS/AWS-config.yml
+#  user: "{{ AWS_Image_User }}"
+#  become: true
+  gather_facts: true
+#  vars:
+#    ansible_ssh_private_key_file: "{{ AWS_Private_Key_File }}"
+  roles:
+    - update-remote-env
+
+

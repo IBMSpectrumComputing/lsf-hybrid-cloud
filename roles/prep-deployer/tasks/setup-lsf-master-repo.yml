@@ -1,0 +1,33 @@
+---
+#-----------------------------------
+# Copyright IBM Corp. 1992, 2017. All rights reserved.
+# US Government Users Restricted Rights - Use, duplication or disclosure
+# restricted by GSA ADP Schedule Contract with IBM Corp.
+#-----------------------------------
+
+- name: Make local rpm directory
+  file:
+    path: "{{ RC_PLAY_TOP }}/files/rpms"
+    recurse: yes
+    state: directory
+
+- name: Copy the needed rpms into the files directory
+  copy:
+    src: "{{ item }}"
+    dest: "{{ RC_PLAY_TOP }}/files/rpms"
+    force: no
+    mode: 644
+  with_fileglob:
+    - "{{ LSF_PACKAGES_DIR }}/ibm-jre*rpm"
+    - "{{ LSF_PACKAGES_DIR }}/lsf-nfs-support*rpm"
+    - "{{ LSF_PACKAGES_DIR }}/lsf-client*rpm"
+    - "{{ LSF_PACKAGES_DIR }}/lsf-conf*rpm"
+    - "{{ LSF_PACKAGES_DIR }}/lsf-devel*rpm"
+    - "{{ LSF_PACKAGES_DIR }}/lsf-ego-master*rpm"
+    - "{{ LSF_PACKAGES_DIR }}/lsf-ego-server*rpm"
+    - "{{ LSF_PACKAGES_DIR }}/lsf-integrations*rpm"
+    - "{{ LSF_PACKAGES_DIR }}/lsf-man-pages*rpm"
+    - "{{ LSF_PACKAGES_DIR }}/lsf-server*rpm"
+    - "{{ LSF_PACKAGES_DIR }}/lsf-master*rpm"
+    - "{{ LSF_PACKAGES_DIR }}/lsf-release*rpm"
+    - "{{ LSF_PACKAGES_DIR }}/lsf-resource-connector*rpm"

@@ -1,0 +1,22 @@
+# Debug flag to turn on more variable debugging.
+# Turn off for real deployments!!!  It shows passwords
+Debug_Tasks: true
+
+# LSF directories
+LSF_SUITE_TOP: /opt/ibm/lsfsuite
+LSF_TOP: "{{ LSF_SUITE_TOP }}/lsf"
+LSF_CONF_DIR: "{{ LSF_TOP }}/conf"
+LSF_WORK_DIR: "{{ LSF_TOP }}/work"
+LSF_LOG_DIR: /opt/ibm/lsflogs
+
+# Directories for the Resource COnnector playbooks
+RC_PLAY_TOP: /opt/ibm/lsf-hybrid-cloud
+
+# rpm packages location
+LSF_PACKAGES_DIR: /var/www/html/lsf_suite_pkgs/x86_64
+
+# LSF on-premise cluster name
+LOCAL_LSF_CLUSTER_NAME: myCluster
+
+# LSF on-cloud cluster name
+CLOUD_LSF_CLUSTER_NAME: myCloudCluster

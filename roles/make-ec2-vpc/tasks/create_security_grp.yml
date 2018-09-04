@@ -1,0 +1,83 @@
+---
+#-----------------------------------
+# Copyright IBM Corp. 1992, 2017. All rights reserved.
+# US Government Users Restricted Rights - Use, duplication or disclosure
+# restricted by GSA ADP Schedule Contract with IBM Corp.
+#-----------------------------------
+
+- name: Running create_security_grp.yml
+  debug:
+    msg: "Creating Security Group in VPC {{ AWS_VPC }} for subnet {{ AWS_VPC_PRV_Subnet }} "
+
+- name: "Create the Security Group"
+  ec2_group:
+    aws_access_key: "{{ AWS_Access_Key }}"
+    aws_secret_key: "{{ AWS_Secret_Key }}"
+    ec2_url: "{{ AWS_EC2_URL }}"
+    region: "{{ AWS_Region }}"
+    state: present
+    vpc_id: "{{ AWS_VPC }}"
+    name: My_LSF_VPC_SEC_GRP
+    description:  Allow SSH and OpenVPN
+    rules:
+      - proto: tcp
+        from_port: 22
+        to_port: 22
+        cidr_ip: 0.0.0.0/0
+        # rule_desc: Allow SSH
+      - proto: udp
+        from_port: 1194
+        to_port: 1194
+        cidr_ip: 0.0.0.0/0
+        # rule_desc: Allow OpenVPN
+      - proto: icmp
+        from_port: 8 # icmp type, -1 = any type
+        to_port:  -1 # icmp subtype, -1 = any subtype
+        cidr_ip: 0.0.0.0/0
+      - proto: icmp
+        from_port: 3 # icmp type, -1 = any type
+        to_port:  -1 # icmp subtype, -1 = any subtype
+        cidr_ip: 0.0.0.0/0
+      - proto: tcp
+        from_port: 0
+        to_port: 65535
+        cidr_ip: "{{ client_cidr }}" 
+        # rule_desc: Allow TCP from Client Net    
+      - proto: udp
+        from_port: 0
+        to_port: 65535
+        cidr_ip: "{{ client_cidr }}"
+        # rule_desc: Allow UDP from Client Net     
+      - proto: tcp
+        from_port: 0
+        to_port: 65535
+        cidr_ip: "{{ server_cidr }}" 
+        # rule_desc: Allow TCP from VPN Net    
+      - proto: udp
+        from_port: 0
+        to_port: 65535
+        cidr_ip: "{{ server_cidr }}"
+        # rule_desc: Allow UDP from VPN Net     
+      - proto: tcp
+        from_port: 0
+        to_port: 65535
+        cidr_ip: "{{ AWS_VPC_PRV_CIDR }}"
+        # rule_desc: Allow TCP from EC2 subnet
+      - proto: udp
+        from_port: 0
+        to_port: 65535
+        cidr_ip: "{{ AWS_VPC_PRV_CIDR }}"     
+        # rule_desc: Allow UDP from EC2 subnet
+  register: security_grp
+
+- name: Dump variables for debugging
+  template:
+    src: "{{ RC_PLAY_TOP }}/template/dumpall.j2"
+    dest: /tmp/ansible-vpc-sec_grp
+  when: Debug_Tasks == true
+
+- name: Set security group value in file
+  lineinfile:
+    dest: "{{ RC_PLAY_TOP }}/AWS/AWS-config.yml"
+    regexp: '^AWS_VPC_Security_Group:.*'
+    line: 'AWS_VPC_Security_Group: {{ security_grp.group_id }}'

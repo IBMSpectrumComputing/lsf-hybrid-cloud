@@ -1,0 +1,35 @@
+---
+# -----------------------------------
+#  Copyright IBM Corp. 1992, 2018. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+# The lsf-ego-server will pull in the lsf-server, lsf-client, lsf-conf
+# ebroker: getAvaiableTemplates requires java. so install ibm-jre
+- name: Install LSF packages
+  yum:
+    name: "{{ item }}" 
+    enablerepo: lsf
+    state: present
+    update_cache: yes
+  with_items:
+      - ibm-jre
+      - lsf-devel
+      - lsf-ego-master
+      - lsf-master
+      - lsf-release 
+      - lsf-resource-connector
+
+- name: Copy LSF entitlement file from on-premise cluster to on-cloud cluster
+  copy:
+    src: "{{ LSF_CONF_DIR }}/lsf.entitlement"
+    dest: "{{ LSF_CONF_DIR }}/lsf.entitlement"
+    mode: 0644
+
+- name: Set the LSF_SERVER_HOSTS
+  lineinfile: 
+    dest: "{{ LSF_TOP }}/conf/lsf.conf"
+    state: present
+    line: 'LSF_SERVER_HOSTS="{{ ec2servers[0].prv_name }}"'
+
