@@ -5,7 +5,9 @@ The AWS-config.yml file contains the configuration parameters needed to create t
 It is necessary to choose the type of LSF cluster to deploy early in the process.  This is done by editing the AWS/AWS-config.yml file.  For a LSF Stretch cluster change the file as follows:
 
 > \# What type of cluster to deploy.  Uncomment one of these
+>
 > \#multi_cluster: true
+>
 > hybrid_cluster: true
 
 For a LSF Multi Cluster deployment change the file setting to:
