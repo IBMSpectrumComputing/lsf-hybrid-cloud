@@ -1,0 +1,20 @@
+---
+# This file contians the list of filesystems to mount on the
+# cloud machines.  It is used to generate the contens of the
+# /etc/fstab
+#
+# NOTE:  The NFS servers must allow machines on the cloud 
+#        subnets permission to mount the filesystem
+#
+sharedir: 
+  - export: 10.10.10.10:/export
+    mountpnt: /nfs
+    type: nfs
+    args: defaults  
+
+# Spectrum Scale would look something like:
+#
+#  - export: gpfs
+#    mountpnt: /some_mount_point
+#    type: gpfs
+#    args: rw,mtime,atime,dev=gpfs,noauto
