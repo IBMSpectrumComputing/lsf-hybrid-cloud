@@ -116,6 +116,7 @@
       with_items:
         - "inventory_ec2.yml"
         - "inventory_ec2servers.yml"
+        - "deploy-lsf-server.tar"
 
     - name: Remove the support files
       file:
