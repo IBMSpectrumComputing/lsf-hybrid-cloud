@@ -132,6 +132,17 @@
         - "fstab.append"
         - "hosts-lsf"
 
+    - name: Clean LSF hostcache
+      lineinfile:
+        dest: /opt/ibm/lsfsuite/lsf/work/myCluster/ego/lim/hostcache
+        regexp: '.*awshost.*'
+        create: no
+        state: absent
+
+    - name: Reconfigure LSF
+      shell: echo "y" | lsadmin reconfig
+
+
 # ----------  Delete VPC  -------------
     - name: Delete VPC private subnet
       ec2_vpc_subnet:
