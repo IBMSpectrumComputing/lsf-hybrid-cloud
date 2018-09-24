@@ -13,7 +13,7 @@
   vars_prompt:
     - name: user_del_vpc
       prompt: "\n****************************  Input Needed ****************************\n\nDo you want to delete the VPC [y/n] ?"
-      default: "y"
+      default: "n"
       private: no
 
   tasks:
@@ -139,9 +139,17 @@
         create: no
         state: absent
 
+    - name: Clean LSF shared file
+      lineinfile:
+        dest: /opt/ibm/lsfsuite/lsf/conf/lsf.shared
+        regexp: "^{{ CLOUD_LSF_CLUSTER_NAME }}.*"
+        create: no
+        state: absent
+
+
     - name: Reconfigure LSF
       shell: echo "y" | lsadmin reconfig
-
+      ignore_errors: True
 
 # ----------  Delete VPC  -------------
     - name: Delete VPC private subnet
