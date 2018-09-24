@@ -5,13 +5,24 @@
 # restricted by GSA ADP Schedule Contract with IBM Corp.
 #-----------------------------------
 
+- name: Check for boto packages
+  shell: rpm -qa |grep python2-boto |echo $?
+  register: HaveBoto
+  ignore_errors: True
+
+- name: Set HaveBoto fact
+  set_fact:
+    HaveBoto: "{{ HaveBoto.stdout_lines[0] }}"
+
 - name: Install Dependencies for getting boto packages
   package:
     name: "{{ item }}"
     state: latest
   with_items:
     - wget
-  when: ansible_os_family == "RedHat"
+  when: 
+    - ansible_os_family == "RedHat"
+    - HaveBoto == 0
 
 - name: Get EPEL Repo rpm
   shell: wget http://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
@@ -19,6 +30,9 @@
     chdir: /root
     creates: /root/epel-release-latest-7.noarch.rpm
     warn: false
+  when: 
+    - ansible_os_family == "RedHat"
+    - HaveBoto == 0
 
 - name: Add EPEL Repo rpm
   shell: rpm -ivh epel-release-latest-7.noarch.rpm
@@ -26,6 +40,9 @@
     chdir: /root
     warn: False
     creates: /etc/yum.repos.d/epel.repo
+  when: 
+    - ansible_os_family == "RedHat"
+    - HaveBoto == 0
 
 - name: Install boto packages
   package:
@@ -34,7 +51,9 @@
   with_items:
     - python2-boto
     - python2-boto3
-  when: ansible_os_family == "RedHat"
+  when: 
+    - ansible_os_family == "RedHat"
+    - HaveBoto == 0
 
 - name: Make local files directory
   file:
@@ -46,11 +65,14 @@
     src: /root/.ssh/id_rsa.pub
     dest: "{{ RC_PLAY_TOP }}/files/id_rsa.pub"
 
+- name: Copy the SSH id_rsa to our files directory
+  copy: 
+    src: /root/.ssh/id_rsa
+    dest: "{{ RC_PLAY_TOP }}/files/id_rsa"
+
 - name: Remove VPN Server tun0 IP from SSH knownhosts
   lineinfile:
     dest: /root/.ssh/known_hosts
     state: absent
-    # regexp: '^10\.0\.11\.1'
     regexp: "^{{ SERVER_IP|regex_escape() }}.*"
-    # regexp: "{{ SERVER_IP }}.*"
 
