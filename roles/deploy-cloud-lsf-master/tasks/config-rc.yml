@@ -98,6 +98,13 @@
     regexp: '^LSF_LOCAL_RESOURCES.*'
     line: LSF_LOCAL_RESOURCES="[resource awshost]"
 
+- name: Update LSF lsf.conf add LSB_RC_EXTERNAL_HOST_IDLE_TIME
+  lineinfile:
+    dest: "{{ LSF_TOP }}/conf/lsf.conf"
+    state: present
+    regexp: '^LSB_RC_EXTERNAL_HOST_IDLE_TIME.*'
+    line: "LSB_RC_EXTERNAL_HOST_IDLE_TIME=1"
+
 - name: Enable aws by using aws_enable.sh
   shell: ./aws_enable.sh -f aws_enable.config 
   args:
