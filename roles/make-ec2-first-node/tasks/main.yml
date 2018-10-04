@@ -7,4 +7,16 @@
 
 - include_vars: "{{ RC_PLAY_TOP }}/AWS/AWS-config.yml"
 
-- include: start_ec2_node.yml
+# Start a Multi-cluster VPN node
+- include: start_MC_ec2_node.yml
+  when:
+    - multi_cluster is defined
+    - multi_cluster == true
+
+# Start a Stretch Cluster VPN node
+- include: start_SC_ec2_node.yml
+  when:
+    - hybrid_cluster is defined
+    - hybrid_cluster == true
+
+- include: post-deploy-steps.yml

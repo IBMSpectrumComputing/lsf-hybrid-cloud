@@ -80,7 +80,7 @@
       ignore_errors: True
       when: have_vpninv.stat.exists == True
 
-    - name: Wait for volumes to be free
+    - name: Wait for instances to terminate before deleting more
       pause:
         seconds: 180
       when: have_inv.stat.exists == True or have_vpninv.stat.exists == True
