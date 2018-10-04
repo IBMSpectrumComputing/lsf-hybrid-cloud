@@ -1,6 +1,11 @@
 ---
 
 # What type of cluster to deploy.  Uncomment one of these
+# multi_cluster  - Deploys a LSF master on the cloud and 
+#                  configures the resource connector to
+#                  dynamically size cluster.
+# hybrid_cluster - Deploys additional machines in te cloud 
+#                  that will join your on premises LSF cluster.
 #multi_cluster: true
 hybrid_cluster: true
 
@@ -8,8 +13,8 @@ hybrid_cluster: true
 AWS_Region: us-east-2
 
 # Set the access key and secret key for your root AWS account
-AWS_Access_Key:
-AWS_Secret_Key:
+AWS_Access_Key: {Put your key here}
+AWS_Secret_Key: {Put your secret here}
 
 # The size of the instance to make
 AWS_Instance_Type: t2.micro
@@ -75,6 +80,11 @@ AWS_VPC_NACLs: none
 # ssh in. Starts with "sg-".  Initially set to:  none
 AWS_VPC_Security_Group: none
 
+# When using the multi_cluster deployment this is the
+# name of the IAM Role that will be assigned to the LSF
+# master on the cloud.  If "none" one will be generated
+# called "LSFRCRole"
+AWS_IAM_Role_Name: none
 
 # Set to the name of the SSH key you generated for your user
 # Remember to download the associated "*.pem" file and put it in the 
