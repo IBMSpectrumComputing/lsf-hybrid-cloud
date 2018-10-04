@@ -12,7 +12,7 @@
     state: present
     insertafter: "^# AWS_IAM_CREDENTIAL_ID.*"
     backup: yes
-    line: "AWS_IAM_CREDENTIAL_ID={{ AWS_Access_Key }}"
+    line: "AWS_IAM_CREDENTIAL_ID=Booger"
 
 - name: Update aws_enable.config to define AWS_IAM_CREDENTIAL_KEY
   lineinfile:
@@ -20,9 +20,9 @@
     state: present
     insertafter: "^# AWS_IAM_CREDENTIAL_KEY.*"
     backup: yes
-    line: "AWS_IAM_CREDENTIAL_KEY={{ AWS_Secret_Key }}"
+    line: "AWS_IAM_CREDENTIAL_KEY=Nuggets"
 
-- name: Update aws_enable.config to define AWS_REGION 
+- name: Update aws_enable.config to define AWS_REGION
   lineinfile:
     dest: "{{ LSF_TOP }}/10.1/install/aws_enable.config"
     state: present
@@ -45,6 +45,15 @@
     dest: "{{ LSF_CONF_DIR }}/resource_connector/"
     follow: yes
     backup: yes
+
+- name: Create getAwsTokens.py file
+  template:
+    src: files/getAwsTokens.py
+    dest: "{{ LSF_CONF_DIR }}/resource_connector/aws/conf"
+    follow: yes
+    backup: yes
+    mode: '0755'
+    owner: "lsfadmin"
 
 # Move the preProv file to /opt/ibm/lsfsuite/lsf/10.1/resource_connector/aws/scripts/
 - name: Create a pre-provison file for ebroker
@@ -106,10 +115,23 @@
     line: "LSB_RC_EXTERNAL_HOST_IDLE_TIME=1"
 
 - name: Enable aws by using aws_enable.sh
-  shell: ./aws_enable.sh -f aws_enable.config 
+  shell: ./aws_enable.sh -f aws_enable.config
   args:
     chdir: "{{ LSF_TOP }}/10.1/install"
     warn: False
+
+- name: Switch to federated credentials
+  lineinfile:
+    dest: "{{ LSF_TOP }}/conf/resource_connector/aws/conf/awsprov_config.json"
+    state: absent
+    regexp: '.*AWS_CREDENTIAL_FILE.*'
+
+- name: Switch to federated credentials
+  lineinfile:
+    dest: "{{ LSF_TOP }}/conf/resource_connector/aws/conf/awsprov_config.json"
+    state: present
+    line: '  "AWS_CREDENTIAL_SCRIPT": "/opt/ibm/lsfsuite/lsf/conf/resource_connector/aws/conf/getAwsTokens.py",'
+    insertafter: '^{.*'
 
 - name: Temporary solution to replace java with /opt/ibm/jre/bin/java
   shell: sed -i "s/java/\/opt\/ibm\/jre\/bin\/java/" *.sh

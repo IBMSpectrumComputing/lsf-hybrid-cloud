@@ -289,4 +289,40 @@
       shell: rm -rf "{{ RC_PLAY_TOP }}/files/rpms"
       when:
         - del_vpc == "y"
- 
+
+    - name: Delete the IAM Policy
+      iam_policy:
+        aws_access_key: "{{ AWS_Access_Key }}"
+        aws_secret_key: "{{ AWS_Secret_Key }}"
+        ec2_url: "{{ AWS_EC2_URL }}"
+        region: "{{ AWS_Region }}"
+        iam_type: role
+        iam_name: LSFRCRole
+        policy_name: "RC-Access"
+        state: absent
+      when:
+        - AWS_IAM_Role_Name != "none"
+        - del_vpc == "y" 
+
+    - name: Delete the IAM Role
+      iam:
+        aws_access_key: "{{ AWS_Access_Key }}"
+        aws_secret_key: "{{ AWS_Secret_Key }}"
+        ec2_url: "{{ AWS_EC2_URL }}"
+        region: "{{ AWS_Region }}"
+        iam_type: role
+        name: LSFRCRole
+        state: absent
+      when:
+        - AWS_IAM_Role_Name != "none"
+        - del_vpc == "y" 
+      
+    - name: Reset AWS_IAM_Role_Name value in file
+      lineinfile:
+        dest: "{{ RC_PLAY_TOP }}/AWS/AWS-config.yml"
+        regexp: '^AWS_IAM_Role_Name:.*'
+        line: 'AWS_IAM_Role_Name: none'
+      when:
+        - AWS_IAM_Role_Name != "none"
+        - del_vpc == "y"
+

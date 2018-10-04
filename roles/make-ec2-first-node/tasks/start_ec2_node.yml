@@ -7,7 +7,7 @@
 #
 ---
 
-- name: Provision the EC2 node that will be VPN+LSF server
+- name: Provision the EC2 node that will be VPN and maybe LSF server
   ec2:
     aws_access_key: "{{ AWS_Access_Key }}"
     aws_secret_key: "{{ AWS_Secret_Key }}"
@@ -24,8 +24,36 @@
     exact_count: 1
     count_tag: foo
     instance_tags:
-      Name: VPN-host
+      Name: VPN-host-SC
   register: ec2
+  when:
+    - hybrid_cluster is defined
+    - hybrid_cluster == true
+
+- name: Provision the EC2 node that will be VPN and maybe LSF Master
+  ec2:
+    aws_access_key: "{{ AWS_Access_Key }}"
+    aws_secret_key: "{{ AWS_Secret_Key }}"
+    key_name: "{{ AWS_Key_Name }}"
+    group_id: "{{ AWS_VPC_Security_Group }}"
+    ec2_url: "{{ AWS_EC2_URL }}"
+    instance_type: "{{ AWS_Instance_Type }}"
+    region: "{{ AWS_Region }}"
+    image: "{{ AWS_Image }}"
+    vpc_subnet_id: "{{ AWS_VPC_PRV_Subnet }}"
+    assign_public_ip: yes
+    source_dest_check: no
+    wait: true
+    exact_count: 1
+    count_tag: foo
+    instance_tags:
+      Name: VPN-host-MC
+    # Would prefer to set the instance profile later, but no API
+    instance_profile_name: "{{ AWS_IAM_Role_Name }}"
+  register: ec2
+  when:
+    - multi_cluster is defined
+    - multi_cluster == true
 
 - name: Add new instance to host group
   add_host:

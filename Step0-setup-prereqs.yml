@@ -19,12 +19,7 @@
         - ( AWS_Access_Key | length == 0 )
       run_once: True
 
-  tags: config-deployer
-
 - name: Setup the AWS API prerequisites.  NOTE...  Needs Internet access
   hosts: LSF_Masters[0]
   roles:
     - prep-deployer
-  tags: config-deployer
-
-  
