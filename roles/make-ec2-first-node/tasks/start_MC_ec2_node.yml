@@ -32,5 +32,6 @@
       Name: VPN-host-MC
     # Would prefer to set the instance profile later, but no API
     instance_profile_name: "{{ AWS_IAM_Role_Name }}"
-  register: ec2
+  register: ec2_MC
+
 

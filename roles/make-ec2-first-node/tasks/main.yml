@@ -13,10 +13,42 @@
     - multi_cluster is defined
     - multi_cluster == true
 
+- name: Dump variables for debugging
+  template:
+    src: template/dumpall.j2
+    dest: /tmp/ansible-variables-postMC
+  when: Debug_Tasks == true
+
 # Start a Stretch Cluster VPN node
 - include: start_SC_ec2_node.yml
   when:
     - hybrid_cluster is defined
     - hybrid_cluster == true
+
+- name: Dump variables for debugging
+  template:
+    src: template/dumpall.j2
+    dest: /tmp/ansible-variables-postSC
+  when: Debug_Tasks == true
+
+- name: Store ec2 variable from MC instances
+  set_fact:
+    ec2: "{{ ec2_MC }}"
+  when:
+    - multi_cluster is defined
+    - multi_cluster == true
+
+- name: Store ec2 variable from SC instances
+  set_fact:
+    ec2: "{{ ec2_SC }}"
+  when:
+    - hybrid_cluster is defined
+    - hybrid_cluster == true
+
+- name: Dump variables for debugging
+  template:
+    src: template/dumpall.j2
+    dest: /tmp/ansible-variables-postSC+MC
+  when: Debug_Tasks == true
 
 - include: post-deploy-steps.yml

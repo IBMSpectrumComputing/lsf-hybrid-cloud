@@ -30,5 +30,5 @@
     count_tag: foo
     instance_tags:
       Name: VPN-host-SC
-  register: ec2
+  register: ec2_SC
 
