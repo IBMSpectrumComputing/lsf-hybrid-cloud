@@ -65,11 +65,6 @@
     src: /root/.ssh/id_rsa.pub
     dest: "{{ RC_PLAY_TOP }}/files/id_rsa.pub"
 
-- name: Copy the SSH id_rsa to our files directory
-  copy: 
-    src: /root/.ssh/id_rsa
-    dest: "{{ RC_PLAY_TOP }}/files/id_rsa"
-
 - name: Remove VPN Server tun0 IP from SSH knownhosts
   lineinfile:
     dest: /root/.ssh/known_hosts

@@ -21,10 +21,15 @@
     wait: true
     exact_count: "{{ num_ec2_vm }}"
     source_dest_check: no
+    volumes:
+      - device_name: /dev/sda1
+        volume_type: gp2
+        volume_size: "{{ AWS_Root_Disk_Size }}"
+        delete_on_termination: yes
     count_tag:
       Name: DemoServer
     instance_tags:
-      Name: Server-host
+      Name: LSF-host
   register: newec2servers
   when: num_ec2_vm > 0
 

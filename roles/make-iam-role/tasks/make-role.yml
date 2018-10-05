@@ -33,8 +33,6 @@
     iam_type: role
     iam_name: LSFRCRole
     policy_name: "RC-Access"
-    #policy_document: ../files/permission-policy.json
-    #policy_document: ./permission-policy.json
     policy_document: "{{ RC_PLAY_TOP }}/roles/make-iam-role/tasks/permission-policy.json"
     state: present
 
@@ -43,24 +41,4 @@
     dest: "{{ RC_PLAY_TOP }}/AWS/AWS-config.yml"
     regexp: '^AWS_IAM_Role_Name:.*'
     line: 'AWS_IAM_Role_Name: LSFRCRole'
-    
-#- name: Provision the EC2 node that will be VPN+LSF server
-#  ec2:
-#    aws_access_key: "{{ AWS_Access_Key }}"
-#    aws_secret_key: "{{ AWS_Secret_Key }}"
-#    key_name: "{{ AWS_Key_Name }}"
-#    group_id: "{{ AWS_VPC_Security_Group }}"
-#    ec2_url: "{{ AWS_EC2_URL }}"
-#    instance_type: "{{ AWS_Instance_Type }}"
-#    region: "{{ AWS_Region }}"
-#    image: "{{ AWS_Image }}"
-#    vpc_subnet_id: "{{ AWS_VPC_PRV_Subnet }}"
-#    assign_public_ip: yes
-#    source_dest_check: no
-#    wait: true
-#    exact_count: 1
-#    count_tag: foo
-#    instance_tags:
-#      Name: VPN-host
-#  register: ec2
 

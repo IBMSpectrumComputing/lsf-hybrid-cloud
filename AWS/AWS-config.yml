@@ -25,6 +25,10 @@ AWS_Instance_Type: t2.micro
 AWS_Image: ami-77724e12
 AWS_Image_User: centos
 
+# The size of the volume for the EBS root disk in GBytes
+# Minimum is 8 GBytes
+AWS_Root_Disk_Size: 8
+
 # Set the CIDR block for the VPC.  Note this block must not overlap with
 # any on premises networks, and the VPN network.
 AWS_VPC_CIDR: 10.1.0.0/16

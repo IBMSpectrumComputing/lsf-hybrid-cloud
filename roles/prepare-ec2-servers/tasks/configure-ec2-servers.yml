@@ -51,8 +51,26 @@
   shell: cat /root/authorized_keys >> /root/.ssh/authorized_keys
   when: have_authorized_keys.stat.exists == False
 
+- name: Check for root SSH keys
+  stat:
+    path: /root/.ssh/id_rsa
+  register: id_rsa
+
+- name: Make root SSH keys
+  shell: ssh-keygen -q -t rsa -f /root/.ssh/id_rsa -C "" -N ""
+  args:
+    creates: /root/.ssh/id_rsa
+    chdir: /root
+  when: id_rsa.stat.exists == False
+
+- name: Add roots key
+  shell: cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys
+  args:
+    chdir: /root
+  when: id_rsa.stat.exists == False
+
 #- name: Disable DNS hostname resolution on cloud machines
-  # Having it on messes up LSF because private IP's overlap with Amazon private IPs
+# Having it on messes up LSF because private IP's overlap with Amazon private IPs
 #  lineinfile:
 #    dest: "/etc/nsswitch.conf"
 #    state: present
@@ -75,9 +93,9 @@
 - name: Add Route to the on premises network
   shell: route add -net "{{ CLIENT_NET }}" netmask "{{ CLIENT_MASK }}" gw "{{ ec2vpn[0].prv_ip }}"
   when:
-   - inventory_hostname != ec2vpn[0].pub_ip
+    - inventory_hostname != ec2vpn[0].pub_ip
 
 - name: Add Route to the VPN network
   shell: route add -net "{{ SERVER_NET }}" netmask "{{ SERVER_MASK }}" gw "{{ ec2vpn[0].prv_ip }}"
   when:
-   - inventory_hostname != ec2vpn[0].pub_ip
+    - inventory_hostname != ec2vpn[0].pub_ip
