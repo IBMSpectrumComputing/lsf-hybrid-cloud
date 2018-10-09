@@ -37,7 +37,11 @@
       - proto: icmp
         from_port: 3 # icmp type, -1 = any type
         to_port:  -1 # icmp subtype, -1 = any subtype
-        cidr_ip: 0.0.0.0/0
+        cidr_ip: "{{ client_cidr }}"
+      - proto: icmp
+        from_port: 3 # icmp type, -1 = any type
+        to_port:  -1 # icmp subtype, -1 = any subtype
+        cidr_ip: "{{ server_cidr }}"
       - proto: tcp
         from_port: 0
         to_port: 65535
