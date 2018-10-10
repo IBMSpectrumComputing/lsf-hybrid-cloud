@@ -6,13 +6,13 @@
 #-----------------------------------
 
 - name: Check for boto packages
-  shell: rpm -qa |grep python2-boto |echo $?
+  shell: rpm -qa |grep -c python2-boto
   register: HaveBoto
   ignore_errors: True
 
 - name: Set HaveBoto fact
   set_fact:
-    HaveBoto: "{{ HaveBoto.stdout_lines[0] }}"
+    HaveBoto: "{{ HaveBoto.stdout_lines[0] |int }}"
 
 - name: Install Dependencies for getting boto packages
   package:
@@ -22,7 +22,7 @@
     - wget
   when: 
     - ansible_os_family == "RedHat"
-    - HaveBoto == 0
+    - HaveBoto > 0
 
 - name: Get EPEL Repo rpm
   shell: wget http://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
@@ -32,7 +32,7 @@
     warn: false
   when: 
     - ansible_os_family == "RedHat"
-    - HaveBoto == 0
+    - HaveBoto > 0
 
 - name: Add EPEL Repo rpm
   shell: rpm -ivh epel-release-latest-7.noarch.rpm
@@ -42,7 +42,7 @@
     creates: /etc/yum.repos.d/epel.repo
   when: 
     - ansible_os_family == "RedHat"
-    - HaveBoto == 0
+    - HaveBoto > 0
 
 - name: Install boto packages
   package:
@@ -53,7 +53,7 @@
     - python2-boto3
   when: 
     - ansible_os_family == "RedHat"
-    - HaveBoto == 0
+    - HaveBoto > 0
 
 - name: Make local files directory
   file:
