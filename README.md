@@ -12,6 +12,10 @@ Additional videos that explain how to use this code is posted here:
 
 The sample Ansible playbooks will create the LSF Hybrid cluster on AWS.  These playbooks should be taken and customized to meet your specific site requirements.
 
+## Requirements
+To use these playbooks you will need the following:
+1. IBM Spectrum Suite 10.2.x Enterprise, HPC, or Workgroup editions (Note: Workgroup does not support the Multi Cluster install)
+2. LSF Master with a YUM repository containing CentOS 7.5, or RHEL 7.5.  This is because of a dependency of the python2-boto3 package.
 
 ## Launching
 The LSF Stretch cluster and LSF Multi clusters are all created using a series of Ansible playbooks.  These playbooks are used to perform the following steps in order:
