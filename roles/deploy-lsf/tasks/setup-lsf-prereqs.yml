@@ -58,6 +58,49 @@
     enablerepo: lsf
     state: present
 
+- name: Change clustername in lsf.conf
+  shell: sed -i -e s:myCluster:"{{ LOCAL_LSF_CLUSTER_NAME | default('myCluster') }}":g "{{ item }}"
+  with_items:
+    - "{{ LSF_CONF_DIR }}/lsf.conf"
+    - "{{ LSF_CONF_DIR }}/cshrc.lsf"
+    - "{{ LSF_CONF_DIR }}/profile.lsf"
+    - "{{ LSF_CONF_DIR }}/lsf.shared"
+  when: '"{{ LOCAL_LSF_CLUSTER_NAME }}" not in "myCluster"'
+
+- name: Check for lsf.cluster.(clustername) file
+  stat: path="{{ LSF_CONF_DIR }}/lsf.cluster.{{ LOCAL_LSF_CLUSTER_NAME | default('myCluster') }}"
+  register: lsfclusterfile
+
+- name: Rename lsf.cluster.(clustername) file
+  shell: mv "{{ LSF_CONF_DIR }}/lsf.cluster.myCluster" "{{ LSF_CONF_DIR }}/lsf.cluster.{{ LOCAL_LSF_CLUSTER_NAME | default('myCluster') }}"
+  when: lsfclusterfile.stat.exists == False
+
+- name: Check for lsbatch/(clustername) directory
+  stat: path="{{ LSF_CONF_DIR }}/lsbatch/{{ LOCAL_LSF_CLUSTER_NAME | default('myCluster') }}"
+  register: lsbatchdir
+
+- name: Rename lsbatch/(clustername) directory
+  shell: mv "{{ LSF_CONF_DIR }}/lsbatch/myCluster" "{{ LSF_CONF_DIR }}/lsbatch/{{ LOCAL_LSF_CLUSTER_NAME | default('myCluster') }}"
+  when: lsbatchdir.stat.exists == False
+
+- name: Check for ego/(clustername) directory
+  stat: path="{{ LSF_CONF_DIR }}/ego/{{ LOCAL_LSF_CLUSTER_NAME | default('myCluster') }}"
+  register: egodir
+
+- name: Rename ego/(clustername) directory
+  shell: mv "{{ LSF_CONF_DIR }}/ego/myCluster" "{{ LSF_CONF_DIR }}/ego/{{ LOCAL_LSF_CLUSTER_NAME | default('myCluster') }}"
+  when: egodir.stat.exists == False
+
+- name: Change clustername in ego conf files
+  shell: sed -i -e s:myCluster:"{{ LOCAL_LSF_CLUSTER_NAME | default('myCluster') }}":g "{{ item }}"
+  with_items:
+    - "{{ LSF_CONF_DIR }}/ego/{{ LOCAL_LSF_CLUSTER_NAME }}/eservice/esc/conf/services/named.xml"
+    - "{{ LSF_CONF_DIR }}/ego/{{ LOCAL_LSF_CLUSTER_NAME }}/eservice/esd/conf/named/conf/named.conf"
+    - "{{ LSF_CONF_DIR }}/ego/{{ LOCAL_LSF_CLUSTER_NAME }}/kernel/ego.conf"
+  when: 
+    - egodir.stat.exists == False
+    - '"{{ LOCAL_LSF_CLUSTER_NAME }}" not in "myCluster"'
+
 # Modify the LSF lsf.conf file
 - name: Set the LSF_MASTER_LIST
   lineinfile: 
