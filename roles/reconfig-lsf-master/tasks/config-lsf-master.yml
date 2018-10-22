@@ -95,7 +95,7 @@
     LSF_SERVER_HOSTS: "{{ LSFServers.stdout_lines[0] }}"
 
 - name: Gather EGO_MASTER_LIST
-  shell: egrep "^EGO_MASTER_LIST" "{{ LSF_CONF_DIR }}/ego/myCluster/kernel/ego.conf"
+  shell: egrep "^EGO_MASTER_LIST" "{{ LSF_CONF_DIR }}/ego/{{ LOCAL_LSF_CLUSTER_NAME | default('myCluster') }}/kernel/ego.conf"
   register: EGOMasters
   ignore_errors: True
 

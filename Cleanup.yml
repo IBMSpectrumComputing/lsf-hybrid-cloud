@@ -134,7 +134,7 @@
 
     - name: Clean LSF hostcache
       lineinfile:
-        dest: /opt/ibm/lsfsuite/lsf/work/myCluster/ego/lim/hostcache
+        dest: "/opt/ibm/lsfsuite/lsf/work/{{ CLOUD_LSF_CLUSTER_NAME }}/ego/lim/hostcache"
         regexp: '.*awshost.*'
         create: no
         state: absent
