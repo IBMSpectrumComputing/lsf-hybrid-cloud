@@ -146,10 +146,17 @@
         create: no
         state: absent
 
-
     - name: Reconfigure LSF
       shell: echo "y" | lsadmin reconfig
       ignore_errors: True
+
+    - name: Reset AWS_VPN_PRV_IP value in file
+      lineinfile:
+        dest: "{{ RC_PLAY_TOP }}/AWS/AWS-config.yml"
+        regexp: '^AWS_VPN_PRV_IP:.*'
+        line: 'AWS_VPN_PRV_IP: none'
+      when:
+        - AWS_VPN_PRV_IP != "none"
 
 # ----------  Delete VPC  -------------
     - name: Delete VPC private subnet

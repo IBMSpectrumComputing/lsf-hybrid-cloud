@@ -91,11 +91,51 @@
 
 # The following routes are NOT for the VPN node
 - name: Add Route to the on premises network
-  shell: route add -net "{{ CLIENT_NET }}" netmask "{{ CLIENT_MASK }}" gw "{{ ec2vpn[0].prv_ip }}"
+  shell: route add -net "{{ CLIENT_NET }}" netmask "{{ CLIENT_MASK }}" gw "{{ AWS_VPN_PRV_IP }}"
   when:
     - inventory_hostname != ec2vpn[0].pub_ip
 
 - name: Add Route to the VPN network
-  shell: route add -net "{{ SERVER_NET }}" netmask "{{ SERVER_MASK }}" gw "{{ ec2vpn[0].prv_ip }}"
+  shell: route add -net "{{ SERVER_NET }}" netmask "{{ SERVER_MASK }}" gw "{{ AWS_VPN_PRV_IP }}"
   when:
     - inventory_hostname != ec2vpn[0].pub_ip
+
+# Make the routes perminant
+- name: Add route to /etc/sysconfig/network-scripts/route-eth0  part1
+  lineinfile:
+    dest: "/etc/sysconfig/network-scripts/route-eth0"
+    create: yes
+    regexp: 'ADDRESS0.*'
+    line: 'ADDRESS0={{ CLIENT_NET }}'
+
+- name: Add route to /etc/sysconfig/network-scripts/route-eth0  part2
+  lineinfile:
+    dest: "/etc/sysconfig/network-scripts/route-eth0"
+    regexp: 'NETMASK0.*'
+    line: 'NETMASK0={{ CLIENT_MASK }}'
+ 
+- name: Add route to /etc/sysconfig/network-scripts/route-eth0  part3
+  lineinfile:
+    dest: "/etc/sysconfig/network-scripts/route-eth0"
+    regexp: 'GATEWAY0.*'
+    line: 'GATEWAY0={{ AWS_VPN_PRV_IP }}'
+
+- name: Add route to /etc/sysconfig/network-scripts/route-eth0  part4
+  lineinfile:
+    dest: "/etc/sysconfig/network-scripts/route-eth0"
+    create: yes
+    regexp: 'ADDRESS1.*'
+    line: 'ADDRESS1={{ SERVER_NET }}'
+
+- name: Add route to /etc/sysconfig/network-scripts/route-eth0  part5
+  lineinfile:
+    dest: "/etc/sysconfig/network-scripts/route-eth0"
+    regexp: 'NETMASK1.*'
+    line: 'NETMASK1={{ SERVER_MASK }}'
+
+- name: Add route to /etc/sysconfig/network-scripts/route-eth0  part6
+  lineinfile:
+    dest: "/etc/sysconfig/network-scripts/route-eth0"
+    regexp: 'GATEWAY1.*'
+    line: 'GATEWAY1={{ AWS_VPN_PRV_IP }}'
+

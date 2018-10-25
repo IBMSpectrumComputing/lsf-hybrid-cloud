@@ -38,6 +38,12 @@
     dest: /tmp/ansible-variables
   when: Debug_Tasks == true
 
+- name: Save the VPN Private IP address
+  lineinfile:
+    dest: "{{ RC_PLAY_TOP }}/AWS/AWS-config.yml"
+    regexp: '^AWS_VPN_PRV_IP:.*'
+    line: "AWS_VPN_PRV_IP: {{ hostvars[groups.LSF_Masters[0]]['ec2']['instances'][0]['private_ip'] }}"
+
 - name: Output
   debug:
     msg: "Debug:  The VPN nodes private IP is {{ hostvars[groups.LSF_Masters[0]]['ec2']['instances'][0]['private_ip'] }}"

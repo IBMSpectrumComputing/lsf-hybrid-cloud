@@ -58,6 +58,12 @@ SERVER_MASK: 255.255.255.0
 # The values below are set automatically by the "Step1-make-vpc.yml" 
 # playbook as it runs the various tasks.  If you are using an existing
 # VPC then override the values below.
+# If you are providing your own VPN set the AWS_VPN_PRV_IP below
+
+# This is the IP private subnet address of the VPN on the cloud.  The
+# machines on the cloud will have this as a route to the on premises
+# subnet
+AWS_VPN_PRV_IP: none
 
 # This is the ID of the VPC to use for the LSF instances.  
 # Starts with "vpc-".  Initial value is "none"
