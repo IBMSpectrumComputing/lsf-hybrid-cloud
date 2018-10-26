@@ -107,18 +107,24 @@
     create: yes
     regexp: 'ADDRESS0.*'
     line: 'ADDRESS0={{ CLIENT_NET }}'
+  when:
+    - inventory_hostname != ec2vpn[0].pub_ip
 
 - name: Add route to /etc/sysconfig/network-scripts/route-eth0  part2
   lineinfile:
     dest: "/etc/sysconfig/network-scripts/route-eth0"
     regexp: 'NETMASK0.*'
     line: 'NETMASK0={{ CLIENT_MASK }}'
+  when:
+    - inventory_hostname != ec2vpn[0].pub_ip
  
 - name: Add route to /etc/sysconfig/network-scripts/route-eth0  part3
   lineinfile:
     dest: "/etc/sysconfig/network-scripts/route-eth0"
     regexp: 'GATEWAY0.*'
     line: 'GATEWAY0={{ AWS_VPN_PRV_IP }}'
+  when:
+    - inventory_hostname != ec2vpn[0].pub_ip
 
 - name: Add route to /etc/sysconfig/network-scripts/route-eth0  part4
   lineinfile:
@@ -126,16 +132,22 @@
     create: yes
     regexp: 'ADDRESS1.*'
     line: 'ADDRESS1={{ SERVER_NET }}'
+  when:
+    - inventory_hostname != ec2vpn[0].pub_ip
 
 - name: Add route to /etc/sysconfig/network-scripts/route-eth0  part5
   lineinfile:
     dest: "/etc/sysconfig/network-scripts/route-eth0"
     regexp: 'NETMASK1.*'
     line: 'NETMASK1={{ SERVER_MASK }}'
+  when:
+    - inventory_hostname != ec2vpn[0].pub_ip
 
 - name: Add route to /etc/sysconfig/network-scripts/route-eth0  part6
   lineinfile:
     dest: "/etc/sysconfig/network-scripts/route-eth0"
     regexp: 'GATEWAY1.*'
     line: 'GATEWAY1={{ AWS_VPN_PRV_IP }}'
+  when:
+    - inventory_hostname != ec2vpn[0].pub_ip
 
