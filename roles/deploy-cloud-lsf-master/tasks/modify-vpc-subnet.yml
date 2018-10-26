@@ -29,3 +29,4 @@
         region: "{{ AWS_Region }}"
         aws_access_key: "{{ AWS_Access_Key }}"
         aws_secret_key: "{{ AWS_Secret_Key }}"
+        wait: no
