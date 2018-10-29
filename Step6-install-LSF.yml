@@ -27,9 +27,6 @@
 
 - name: Reconfigure LSF Master
   hosts: LSF_Masters[0]
-  tasks:
-    - include_vars: "AWS/AWS-config.yml"
-    - include_vars: "{{ RC_PLAY_TOP }}/inventory_ec2servers.yml"
   roles:
     - gather-lsf-rpms
     - reconfig-lsf-master
