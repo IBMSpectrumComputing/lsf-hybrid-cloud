@@ -42,3 +42,4 @@
 
 - name: Mounting Storage from on premises network
   shell: mount -a
+  ignore_errors: yes

@@ -30,6 +30,7 @@
         hostname: "{{ item.prv_ip }}"
         groupname: ec2servers
       with_items: "{{ ec2servers }}"
+      ignore_errors: True
 
 
 - name: Copy the fstab to the Cloud nodes
@@ -48,12 +49,14 @@
       copy: 
         src: "{{ RC_PLAY_TOP }}/files/fstab.append"
         dest: /etc/fstab.append
+      ignore_errors: True
 
     - name: Merge the fstab entries
       shell: grep -q Storage-config /etc/fstab || cat /etc/fstab.append >> /etc/fstab
       args:
         executable: /bin/bash
         warn: no
+      ignore_errors: True
 
     - name: Make the needed directories
       shell: test -d "{{ item }}" || mkdir -p "{{ item }}"
@@ -62,6 +65,7 @@
         warn: no
       with_items:
         - "{% set list1 = [] %}{% for i in sharedir %}{% if list1.append( i.mountpnt ) %}{% endif %}{% endfor %}{{ list1 }}"
+      ignore_errors: True
 
     - name: Warning
       debug:
@@ -69,4 +73,5 @@
 
     - name: Mounting Storage from on premises network
       shell: mount -a
+      ignore_errors: True
 
