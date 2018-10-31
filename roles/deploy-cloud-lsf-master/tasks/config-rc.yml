@@ -114,6 +114,13 @@
     regexp: '^LSB_RC_EXTERNAL_HOST_IDLE_TIME.*'
     line: "LSB_RC_EXTERNAL_HOST_IDLE_TIME=1"
 
+- name: Update LSF lsf.conf add LSF_DYNAMIC_HOST_TIMEOUT
+  lineinfile:
+    dest: "{{ LSF_TOP }}/conf/lsf.conf"
+    state: present
+    regexp: '^LSF_DYNAMIC_HOST_TIMEOUT.*'
+    line: "LSF_DYNAMIC_HOST_TIMEOUT=5m"
+
 - name: Enable aws by using aws_enable.sh
   shell: ./aws_enable.sh -f aws_enable.config
   args:
