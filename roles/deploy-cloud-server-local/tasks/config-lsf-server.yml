@@ -8,9 +8,13 @@
 # The following routes are NOT for the VPN node
 - name: Add Route to the on premises network
   shell: route add -net "{{ CLIENT_NET }}" netmask "{{ CLIENT_MASK }}" gw "{{ hostvars[groups.ec2vpn[0]]['prv_ip'] }}"
+  when:
+    hostvars[groups.ec2vpn[0]] is defined
 
 - name: Add Route to the VPN network
   shell: route add -net "{{ SERVER_NET }}" netmask "{{ SERVER_MASK }}" gw "{{ hostvars[groups.ec2vpn[0]]['prv_ip'] }}"
+  when:
+    hostvars[groups.ec2vpn[0]] is defined
 
 - name: Load variables
   include_vars: "{{ RC_PLAY_TOP }}/Storage-config.yml"

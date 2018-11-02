@@ -1,4 +1,5 @@
 # These are fstab entries compiled from the Storage-config.yml
+{% if sharedir is defined %}
 {% for i in sharedir %}
 {% set exprt=i.export %}
 {% set mount=i.mountpnt %}
@@ -7,3 +8,4 @@
 {{ exprt }}      {{ mount }}       {{ type }}    {{ fsargs }}    0 0
 {{ '' }}
 {%- endfor %}
+{% endif %}

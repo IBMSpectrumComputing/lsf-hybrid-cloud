@@ -24,8 +24,6 @@
       private: no
 
   tasks:  
-    - include_vars: "inventory_ec2.yml"
-
     - set_fact:
         num_ec2_vm: "{{ num_ec2_vm }}"
 

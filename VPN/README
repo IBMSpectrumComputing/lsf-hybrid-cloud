@@ -79,4 +79,8 @@ the Step2-vpn-bring-up.yml playbook.
 11. Generate a static encryption key
      # openvpn --genkey --secret /opt/ibm/lsf-hybrid-clod/VPN/myvpn.tlsauth
 
-That's it. 
+That's it the keys are ready to be used.
+
+NOTE: If the VPN server is restarted it's public IP may change.  When this happens
+it is necessary to modify the /etc/openvpn/client.conf and set the new "remote"
+address. 

@@ -1,7 +1,7 @@
 # EC2 hosts 
 # Generated file.  Do not edit (unless you know what you are doing) ;)
 
-{% if ec2vpn and ( use_vpn == 'y' or use_vpn == 'Y') %}
+{% if ec2vpn is defined and ( use_vpn == 'y' or use_vpn == 'Y') %}
 {% set vname = ec2vpn[0].prv_name %}
 {% set vlist = vname.split('.') %}
 {{ ec2vpn[0].prv_ip }} {{ vlist[0] }} {{ ec2vpn[0].prv_name }}

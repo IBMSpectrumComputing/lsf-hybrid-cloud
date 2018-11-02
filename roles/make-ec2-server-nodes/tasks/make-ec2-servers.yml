@@ -39,6 +39,10 @@
     dest: /tmp/ansible-variables3
   when: Debug_Tasks
 
+- name: Load in the playbook provided VPN data (ok to fail)
+  include_vars: "inventory_ec2.yml"
+  ignore_errors: True
+
 - name: Create an inventory file  WARNING Assumes LSF_Master[0] is the Deployer
   template:
     src: "{{ RC_PLAY_TOP }}/template/inventory-ec2servers.j2"

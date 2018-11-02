@@ -72,7 +72,8 @@
     follow: yes
 
 - name: Archive the playbook for provisoning lsf servers
-  shell: tar cvf deploy-lsf-server.tar Storage-config.yml inventory_ec2servers.yml inventory_ec2.yml make-lsf-server.yml lsf-inventory roles/ group_vars/ template/ AWS/
+#  shell: tar cvf deploy-lsf-server.tar Storage-config.yml inventory_ec2servers.yml inventory_ec2.yml make-lsf-server.yml lsf-inventory roles/ group_vars/ template/ AWS/
+  shell: tar cvf deploy-lsf-server.tar Storage-config.yml inventory_ec2servers.yml make-lsf-server.yml lsf-inventory roles/ group_vars/ template/ AWS/
   args:
     chdir: "{{ RC_PLAY_TOP }}"
 
