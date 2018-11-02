@@ -8,6 +8,7 @@
 
 - name: Setup the AWS API prerequisites.  NOTE...  Needs Internet access
   hosts: LSF_Masters[0]
+  gather_facts: false
   tasks:
 
     - include_vars: "AWS/AWS-config.yml"
@@ -18,6 +19,25 @@
       when:
         - ( AWS_Access_Key | length == 0 )
       run_once: True
+
+    - name: Determine the LSF cluster name by running lsid
+      shell: lsid |grep 'cluster name is' |awk '{ print $5 }'
+      register: LSFClusterName
+
+    - name: Store clustername in variable
+      set_fact:
+        LSFClusterNameStr: "{{ LSFClusterName.stdout_lines[0] }}"
+
+    - name: Update LSF lsf.conf add ENABLE_DYNAMIC_HOSTS
+      lineinfile:
+        dest: "{{ RC_PLAY_TOP }}/group_vars/all"
+        state: present
+        regexp: 'LOCAL_LSF_CLUSTER_NAME.*'
+        line: "LOCAL_LSF_CLUSTER_NAME: {{ LSFClusterNameStr }}"
+
+    - name: Output the discovered LSF cluster name
+      debug:
+        msg: "Set on premises cluster name as: {{ LSFClusterNameStr }}"
 
 - name: Setup the AWS API prerequisites.  NOTE...  Needs Internet access
   hosts: LSF_Masters[0]
