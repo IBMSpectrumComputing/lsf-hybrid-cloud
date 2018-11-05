@@ -52,6 +52,15 @@
         src: "{{ RC_PLAY_TOP }}/template/fstab.j2"
         dest: "{{ RC_PLAY_TOP }}/files/fstab.append"
 
+    - name: Wait for SSH to come up
+      wait_for:
+        host: "{{ item.public_dns_name }}"
+        port: 22
+        delay: 60
+        timeout: 320
+        state: started
+      with_items: "{{ ec2.instances }}"
+
 
 
 - name: Configure EC2 main instance as part of LSF Cluster
