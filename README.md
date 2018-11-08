@@ -64,4 +64,4 @@ This is a more complex architecture which adds a master scheduler running in the
 
 The two master schedulers instead exchange task meta-data in a “job forwarding” model.    In this model, users on premise submit workload to a queue on premise, which in turn forwards that workload to the cloud for execution.   Upon task completion, the master in the cloud communicates completion, and status with the on premise master and the user is notified.
 
-
+### LSF Cloud Video 11 -  [Decommissioning the Cluster](http://ibm.biz/LSFcloud_video11)
