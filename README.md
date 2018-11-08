@@ -7,8 +7,8 @@ IBM® Spectrum LSF (formerly IBM® Platform™ LSF®) is a complete workload man
 
 Please note, Spectrum LSF is not itself an application in the traditional sense, but instead provides an environment and framework for other applications to be managed and run in a load balanced efficient manner.   It is expected that you will install some kind of application(s) into this environment, or use application installed in your on premise environment to make proper evaluation use of the features and benefits of Spectrum LSF.
 
-Additional videos that explain how to use this code is posted here:
-    { TO be added }
+Additional videos that explain how to use this code are detailed below. 
+
 
 The sample Ansible playbooks will create the LSF Hybrid cluster on AWS.  These playbooks should be taken and customized to meet your specific site requirements.
 
@@ -64,4 +64,41 @@ This is a more complex architecture which adds a master scheduler running in the
 
 The two master schedulers instead exchange task meta-data in a “job forwarding” model.    In this model, users on premise submit workload to a queue on premise, which in turn forwards that workload to the cloud for execution.   Upon task completion, the master in the cloud communicates completion, and status with the on premise master and the user is notified.
 
+## Instructional Videos
+These videos look at how to extent your on premises LSF clusters to the Cloud. In them we look at various topics you need to consider in constructing you Hybrid cloud solution. We show two different LSF configurations suitable for small and large clusters and discuss the benefits of each. We provide sample Ansible playbooks which you can take and customise for your site. Each video covers a different topic, and a different Ansible playbook. They are best viewed in order.
 
+### [LSF Cloud Video 1 - Introduction](http://ibm.biz/LSFcloud_video1)
+This is the first of the video series on creating a hybrid LSF cluster.  This video covers, what is LSF, why do users want to go to the cloud, and how we can help in that journey.  We outline two different ways LSF can be configured.  The first extends the on premises cluster by adding cloud servers to the cluster.  The second constructs a second cluster on the cloud, and dynamically sizes that cluster based on the amount of workload.  The subsequent videos provide additional details and live demonstrations on how to build them.
+
+### [LSF Cloud Video 2 - What Type of Cluster](http://ibm.biz/LSFcloud_video2)
+This video provides details on different way LSF can be configured to use Cloud machines.  We start from the simplest case, the LSF Stretch Cluster, which adds Cloud machines into an existing on premises cluster.  We then show a LSF Multi Cluster, which creates a separate LSF cluster on the cloud that accepts workload from the on premises cluster and dynamically resizes based on policies.  The uses cases of each one is outlined along with the benefits and issues.
+
+### [LSF Cloud Video 3 - Installing Prerequisites](http://ibm.biz/LSFcloud_video3)
+In this video we start the process of building a LSF hybrid cluster.  We start from an existing on premises LSF Suite cluster, and use that, along with some sample Ansible playbooks to deploy the LSF Stretch and LSF Multi clusters on to Amazon Elastic Compute Cloud (Amazon EC2) instances.  This video discusses the prerequisites for the sample playbooks.  It shows how to setup your AWS account and get the needed AWS keys and certificate that will be used later.  It shows the git repository that hosts the code.  It shows how to add the AWS keys to the playbooks and run the first playbook to setup you LSF Master to build the rest of the solution.
+
+### [LSF Cloud Video 4 - Amazon VPC Configuration](http://ibm.biz/LSFcloud_video4)
+This video focuses specifically on Amazon Web Services and there Cloud environment.  In it we show a playbook that will construct a Amazon VPC, along with associated subnets, routes, security groups, network ACLs, and internet gateways.  We also show how to use an existing Amazon VPC with the playbooks.  The LSF cluster will use this Amazon VPC to access the cloud instances.
+
+### [LSF Cloud Video 5 - Network Connection](http://ibm.biz/LSFcloud_video5)
+The connection between the on premises cluster and the cloud instances is a critical part of the infrastructure.  This video looks at different options available with AWS.  It shows a sample playbook that will construct a VPN using OpenVPN.  We also test the connection to verify it can work with LSF.
+
+### [LSF Cloud Video 6 - Users and Groups](http://ibm.biz/LSFcloud_video6)
+In this video we discuss ways in which to resolve the issue of providing a consistent user experience with a hybrid cloud.  We look at possible solutions for synchronising user, group and host configurations between the on premises and cloud machines.  We show a playbook that synchronises the users, groups and hosts between the on premises LSF master and the cloud instances.
+
+### [LSF Cloud Video 7 - Bringup LSF Cloud Instances](http://ibm.biz/LSFcloud_video7)
+This video uses a playbook to bring up additional cloud instances.  The machines are configured so that they can be reached from the on premises LSF master and the users, groups, and host resolution is configured.
+
+### [LSF Cloud Video 8 - Storage](http://ibm.biz/LSFcloud_video8)
+In this video we cover one of the more difficult issues to address in constructing an LSF hybrid cluster.  The architecture of the storage will have a large impact on how the on cloud cluster performs.  This video will cover some options, but it is strongly recommended that users perform there own experiments to see what storage configuration option works best for there workloads.  We demonstrate a simple storage configuration.
+
+### [LSF Cloud Video 9 - LSF Stretch Cluster deployment](http://ibm.biz/LSFcloud_video9) 
+This video demonstrates the deployment of the LSF Stretch cluster.  We take the machine(s) deployed in the previous videos and extent the existing on premises cluster to include additional cloud machines.  We show how the LSF Master is reconfigured, and demonstrate jobs running on the cloud instances.
+
+### [LSF Cloud Video 10 - LSF Multi Cluster deployment](http://ibm.biz/LSFcloud_video10) 
+Here we demonstrate the deployment of the LSF Multi cluster.  We take the machine(s) deployed in the previous videos and extent the existing on premises cluster to include additional cloud machines.  We show how the LSF Master on premises and on cloud is reconfigured.  We submit work to the cluster and see it dynamically create new machines on the cloud, and see it terminate those machines when the load drops.
+
+### [LSF Cloud Video 11 - Decommissioning the Cluster](http://ibm.biz/LSFcloud_video11) 
+This video demonstrates how to take down the on cloud cluster.  It also shows what must be done to remove any hosts that were dynamically created by the resource connector in the LSF Multi cluster.  It is **VERY** important to clean up fully, so a thorough review of this video is recommended. 
+
+### Extending the Code
+The Ansible playbooks used in these videos is hosted on Github <a href="https://github.com/IBMSpectrumComputing/lsf-hybrid-cloud" rel="noopener" target="_blank">here.</a>  They are public and freely available for you to take and customize.  If you add a new feature you'd like to share with everyone, please post it.
