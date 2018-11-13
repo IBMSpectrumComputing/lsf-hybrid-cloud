@@ -39,6 +39,8 @@
     warn: no
   with_items:
     - "{% set list1 = [] %}{% for i in sharedir %}{% if list1.append( i.mountpnt ) %}{% endif %}{% endfor %}{{ list1 }}"
+  when:
+  - sharedir is defined
 
 - name: Warning
   debug:

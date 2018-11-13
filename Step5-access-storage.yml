@@ -44,12 +44,15 @@
   tasks:
     - name: Load variables
       include_vars: "{{ RC_PLAY_TOP }}/Storage-config.yml"
+      ignore_errors: True
 
     - name: Copy the fstab extensions to the cloud machines
       copy: 
         src: "{{ RC_PLAY_TOP }}/files/fstab.append"
         dest: /etc/fstab.append
       ignore_errors: True
+      when:
+      - sharedir is defined
 
     - name: Merge the fstab entries
       shell: grep -q Storage-config /etc/fstab || cat /etc/fstab.append >> /etc/fstab
@@ -57,6 +60,8 @@
         executable: /bin/bash
         warn: no
       ignore_errors: True
+      when:
+      - sharedir is defined
 
     - name: Make the needed directories
       shell: test -d "{{ item }}" || mkdir -p "{{ item }}"
@@ -66,6 +71,8 @@
       with_items:
         - "{% set list1 = [] %}{% for i in sharedir %}{% if list1.append( i.mountpnt ) %}{% endif %}{% endfor %}{{ list1 }}"
       ignore_errors: True
+      when:
+      - sharedir is defined
 
     - name: Warning
       debug:
