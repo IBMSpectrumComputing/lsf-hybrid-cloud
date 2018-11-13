@@ -12,7 +12,11 @@
 {%- endfor %}
 
 # LSF Master
-{% for i in ansible_all_ipv4_addresses %}
-{{ i }}  {{ ansible_fqdn }} {{ ansible_hostname }}
-{{ '' }}
+{% for i in ansible_interfaces %}
+{% set iface = vars.__getitem__('ansible_' + i) %}
+{% if iface.device != 'lo' %}
+{% if iface.device != 'docker0' %}
+{{ iface.ipv4.address }} {{ ansible_fqdn }} {{ ansible_hostname }}      # {{ iface.device }}
+{% endif %}
+{% endif %}
 {%- endfor %}
