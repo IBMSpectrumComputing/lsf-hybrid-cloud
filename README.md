@@ -100,5 +100,46 @@ Here we demonstrate the deployment of the LSF Multi cluster.  We take the machin
 ### [LSF Cloud Video 11 - Decommissioning the Cluster](http://ibm.biz/LSFcloud_video11) 
 This video demonstrates how to take down the on cloud cluster.  It also shows what must be done to remove any hosts that were dynamically created by the resource connector in the LSF Multi cluster.  It is **VERY** important to clean up fully, so a thorough review of this video is recommended. 
 
-### Extending the Code
+## Extending the Code
 The Ansible playbooks used in these videos is hosted on Github <a href="https://github.com/IBMSpectrumComputing/lsf-hybrid-cloud" rel="noopener" target="_blank">here.</a>  They are public and freely available for you to take and customize.  If you add a new feature you'd like to share with everyone, please post it.
+
+## Known Issues
+You may encounter an installation issue with Step6-install-LSF for the Multi-Cluster installation where it complains with:
+```
+2019-01-06 20:53:05,573 p=3555 u=root |  failed: [10.1.1.187] (item=[u'ansible',
+ u'python2-boto', u'python2-boto3']) => {"changed": true, "failed": true, "item"
+: ["ansible", "python2-boto", "python2-boto3"], "msg": "Error: Package: python2-
+boto3-1.4.6-1.el7.noarch (epel)\n           Requires: python2-s3transfer >= 0.1.
+10\n           Available: python2-s3transfer-0.1.10-1.el7.noarch (epel)\n
+        python2-s3transfer = 0.1.10-1.el7\n", "rc": 1, ...
+```
+The problem comes from a renamed python2-s3transfer package.  It's now called python-s3transfer, however the python2-boto3 uses the old name in its dependency list.
+
+If you encounter this problem use the following proceedure to work around the issue until the dependency list is fixed.
+
+### Login to LSF Master on Cloud
+Get the IP address of the LSF master on cloud from the inventory_ec2servers.yml file.  It will typically be in: /opt/ibm/lsf-hybrid-cloud
+In the list of ec2servers take the IP address of the first occurance of "prv_ip".  This is the private IP of the LSF master node, and should be reachable provided the VPN is running.  SSH to this machine e.g. 
+```
+# ssh {IP address from above}
+```
+
+### Manually Install the Needed Packages
+Use the proceedure below to install the needed packages:
+```
+# yum -y install python2-s3transfer
+# yum -y install ansible python2-boto
+
+# mkdir rpms
+# cd rpms
+# yumdownloader --resolve python2-boto3
+
+# rpm -i python2-jmespath-0.9.0-3.el7.noarch.rpm
+# rpm -i python2-futures-3.1.1-5.el7.noarch.rpm
+# rpm -i python2-botocore-1.6.0-1.el7.noarch.rpm
+# rpm -i --nodeps python2-boto3-1.4.6-1.el7.noarch.rpm
+```
+Change the rpm names to match the current versions you downloaded.
+
+### Restart the Installation Step
+Re-run the Step6-install-LSF playbook.
