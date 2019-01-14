@@ -13,9 +13,42 @@
     state: latest
   with_items:
     - ansible
-    - python2-boto
-    - python2-boto3
   when: ansible_os_family == "RedHat"
+
+- name: Install AWS API packages from EPEL
+  package:
+    name: "{{ item }}"
+    state: latest
+  with_items:
+    - python2-boto
+  when: ansible_os_family == "RedHat"
+
+# Appears to be a dependency bug in python2-boto3.  It is not using the 
+# new name for the python2-s3transfer package.
+- name: Install AWS API packages from EPEL part 2
+  shell: |
+    yum -y install python2-boto3
+  register: boto3fail
+  ignore_errors: True
+  when: ansible_os_family == "RedHat"
+
+- name: Attempt boto3 dependency bug work around (if needed)
+  yum:
+    name: "{{ item }}"
+    state: installed
+  with_items:
+    - python2-jmespath
+    - python2-futures
+    - python2-botocore
+    - python2-s3transfer
+  when: boto3fail.rc != 0
+
+- name: Force install python2-boto3 (if needed)
+  shell: |
+    yumdownloader --resolve python2-boto3; RPMS=$(ls *.rpm); for i in $RPMS; do rpm -i --nodeps $i; done
+  args:
+    chdir: /var/tmp
+  when: boto3fail.rc != 0
 
 - name: Set forks as 50 in ansible.cft 
   lineinfile:
