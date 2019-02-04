@@ -60,9 +60,9 @@ the Step2-vpn-bring-up.yml playbook.
 7. Run: build-dh
      # ./build-dh
 
-8. Copy the server files into the /opt/ibm/lsf-hybrid-clod/VPN directory
+8. Copy the server files into the /opt/ibm/lsf-hybrid-cloud/VPN directory
      # cd /etc/openvpn/easy-rsa/keys
-     # cp dh2048.pem ca.crt server.crt server.key /opt/ibm/lsf-hybrid-clod/VPN
+     # cp dh2048.pem ca.crt server.crt server.key /opt/ibm/lsf-hybrid-cloud/VPN
 
 9. Next build the client files.  Run: build-key client
      # cd /etc/openvpn/easy-rsa
@@ -74,10 +74,10 @@ the Step2-vpn-bring-up.yml playbook.
 
 10. Copy the client files 
      # cd /etc/openvpn/easy-rsa/keys
-     # cp client.crt client.csr client.key /opt/ibm/lsf-hybrid-clod/VPN
+     # cp client.crt client.csr client.key /opt/ibm/lsf-hybrid-cloud/VPN
 
 11. Generate a static encryption key
-     # openvpn --genkey --secret /opt/ibm/lsf-hybrid-clod/VPN/myvpn.tlsauth
+     # openvpn --genkey --secret /opt/ibm/lsf-hybrid-cloud/VPN/myvpn.tlsauth
 
 That's it the keys are ready to be used.
 
