@@ -33,7 +33,7 @@
     shell: /bin/bash
     home: /home/lsfadmin
     createhome: yes
-    password: "$6$f6eESttN4lToRaKy$1IWHwBeIn8VYE9PQPzWZDSvdEigUB.1g9wLyz0t/g1.Oa7ZkwVC0YTXRGqehjgVVZUf.bRuWkm8urjZEyfh2u0"
+    password: "!"
     uid: 495 
     group: lsfadmin
     state: present
