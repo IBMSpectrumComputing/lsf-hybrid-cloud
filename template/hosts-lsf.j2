@@ -18,7 +18,9 @@
 {% if iface.device != 'lo' %}
 {% if iface.device != 'docker0' %}
 {% if iface.active %}
+{% if iface.ipv4 is defined %}
 {{ iface.ipv4.address }} {{ ansible_fqdn }} {{ ansible_hostname }}      # {{ iface.device }}
+{% endif %}
 {% endif %}
 {% endif %}
 {% endif %}

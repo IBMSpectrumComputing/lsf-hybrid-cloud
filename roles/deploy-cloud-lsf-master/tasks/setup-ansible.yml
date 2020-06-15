@@ -32,6 +32,11 @@
   ignore_errors: True
   when: ansible_os_family == "RedHat"
 
+- name: Output result of python2-boto3
+  debug:
+    msg: python2-boto3 is NOT installed
+  when: boto3fail.rc != 0
+
 - name: Attempt boto3 dependency bug work around (if needed)
   yum:
     name: "{{ item }}"
@@ -41,13 +46,15 @@
     - python2-futures
     - python2-botocore
     - python2-s3transfer
+  ignore_errors: True
   when: boto3fail.rc != 0
 
 - name: Force install python2-boto3 (if needed)
   shell: |
-    yumdownloader --resolve python2-boto3; RPMS=$(ls *.rpm); for i in $RPMS; do rpm -i --nodeps $i; done
+    wget https://rpmfind.net/linux/epel/7/ppc64/Packages/p/python2-boto3-1.4.6-1.el7.noarch.rpm ; rpm -i --nodeps python2-boto3-1.4.6-1.el7.noarch.rpm
   args:
     chdir: /var/tmp
+    creates: python2-boto3-1.4.6-1.el7.noarch.rpm
   when: boto3fail.rc != 0
 
 - name: Set forks as 50 in ansible.cft 

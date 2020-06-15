@@ -33,3 +33,9 @@
     state: present
     line: 'LSF_SERVER_HOSTS="{{ ec2servers[0].prv_name }}"'
 
+- name: Allow LSF root user
+  lineinfile:
+    dest: "{{ LSF_TOP }}/conf/lsf.conf"
+    state: present
+    line: 'LSF_ROOT_USER=Y'
+

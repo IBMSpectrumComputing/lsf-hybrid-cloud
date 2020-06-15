@@ -5,6 +5,11 @@
 # #  restricted by GSA ADP Schedule Contract with IBM Corp.
 # # -----------------------------------
 
+- name: Has the aws_enable script run before
+  stat:
+    path: "{{ LSF_TOP }}/10.1/install/.ranalready"
+  register: rundone
+
 # Change aws_enable.config file
 - name: Update aws_enable.config to define AWS_IAM_CREDENTIAL_ID
   lineinfile:
@@ -13,6 +18,7 @@
     insertafter: "^# AWS_IAM_CREDENTIAL_ID.*"
     backup: yes
     line: "AWS_IAM_CREDENTIAL_ID=Booger"
+  when: rundone.stat.exists is defined and rundone.stat.exists == False
 
 - name: Update aws_enable.config to define AWS_IAM_CREDENTIAL_KEY
   lineinfile:
@@ -21,6 +27,7 @@
     insertafter: "^# AWS_IAM_CREDENTIAL_KEY.*"
     backup: yes
     line: "AWS_IAM_CREDENTIAL_KEY=Nuggets"
+  when: rundone.stat.exists is defined and rundone.stat.exists == False
 
 - name: Update aws_enable.config to define AWS_REGION
   lineinfile:
@@ -29,6 +36,16 @@
     insertafter: "^# AWS_REGION.*"
     backup: yes
     line: "AWS_REGION={{ AWS_Region }}"
+  when: rundone.stat.exists is defined and rundone.stat.exists == False
+
+- name: Update aws_enable.config to define LSF_HOST_ADDR_RANGE
+  lineinfile:
+    dest: "{{ LSF_TOP }}/10.1/install/aws_enable.config"
+    state: present
+    insertafter: "^# LSF_HOST_ADDR_RANGE.*"
+    backup: yes
+    line: 'LSF_HOST_ADDR_RANGE=*.*.*.*'
+  when: rundone.stat.exists is defined and rundone.stat.exists == False
 
 # Generate aws template file
 - name: Create an awsprov_templates.json file
@@ -73,12 +90,14 @@
     dest: "{{ LSF_TOP }}/10.1/install/aws_enable.sh"
     regexp: '^LSF_CLUSTER_NAME=`.*'
     replace: "LSF_CLUSTER_NAME=`get_clusters_name \"$LSF_ENVDIR/lsf.shared\" | awk -F' ' '{ print $1 }'`"
+  when: rundone.stat.exists is defined and rundone.stat.exists == False
 
 - name: Fix aws_enable.sh in line 520 to comment AWS_LSF_TOP
   replace:
     dest: "{{ LSF_TOP }}/10.1/install/aws_enable.sh"
     regexp: '^AWS_LSF_TOP=`.*'
     replace: "AWS_LSF_TOP=\"AWS_LSF_TOP\""
+  when: rundone.stat.exists is defined and rundone.stat.exists == False
 
 - name: Fix aws_enable.sh in line 1080 to comment update_user_data function
   lineinfile:
@@ -86,6 +105,7 @@
     backrefs: yes
     regexp: '^(update_user_data \"\$user_data_script\".*)'
     line: '# \1'
+  when: rundone.stat.exists is defined and rundone.stat.exists == False
 
 # Copy amazon pem file to conf/resource_connector/aws/data
 - name: Copy amazon pem file
@@ -126,6 +146,14 @@
   args:
     chdir: "{{ LSF_TOP }}/10.1/install"
     warn: False
+  when: rundone.stat.exists is defined and rundone.stat.exists == False
+
+- name: Create a flag file to only run aws_enable.sh -f aws_enable.config once
+  shell: touch .ranalready
+  args:
+    chdir: "{{ LSF_TOP }}/10.1/install"
+    warn: False
+  when: rundone.stat.exists is defined and rundone.stat.exists == False
 
 - name: Switch to federated credentials
   lineinfile:
@@ -140,11 +168,11 @@
     line: '  "AWS_CREDENTIAL_SCRIPT": "/opt/ibm/lsfsuite/lsf/conf/resource_connector/aws/conf/getAwsTokens.py",'
     insertafter: '^{.*'
 
-- name: Temporary solution to replace java with /opt/ibm/jre/bin/java
-  shell: sed -i "s/java/\/opt\/ibm\/jre\/bin\/java/" *.sh
-  args:
-    chdir: "{{ LSF_TOP }}/10.1/resource_connector/aws/scripts/"
-    warn: False
+#- name: Temporary solution to replace java with /opt/ibm/jre/bin/java
+#  shell: sed -i "s/java/\/opt\/ibm\/jre\/bin\/java/" *.sh
+#  args:
+#    chdir: "{{ LSF_TOP }}/10.1/resource_connector/aws/scripts/"
+#    warn: False
 
 - name: Copy playbook to aws lsf master
   copy:
