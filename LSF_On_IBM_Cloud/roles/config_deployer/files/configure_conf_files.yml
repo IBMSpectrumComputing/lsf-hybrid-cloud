@@ -1,0 +1,247 @@
+---
+#-----------------------------------
+# Copyright IBM Corp. 1992, 2017. All rights reserved.
+# US Government Users Restricted Rights - Use, duplication or disclosure
+# restricted by GSA ADP Schedule Contract with IBM Corp.
+#-----------------------------------
+# role may get changed to non-master roles while conf/work dirs are symlinked to HA_shared_dir
+
+- name: Check if .conf_bak exists
+  stat:
+    path: "{{ LSF_TOP }}/.conf_bak"
+  register: stat_lsf_conf_bak
+
+- name: Set was_previously_master
+  set_fact:
+    was_previously_master: >-
+      {% if  stat_lsf_conf_bak.stat.exists == True and LSF.HA_shared_dir | default('none') != 'none' and inventory_hostname in lsf_server_hosts -%}Y{% else %}N{% endif -%}
+
+- name: debug was_previously_master
+  debug:
+    msg: "{{ was_previously_master }}"
+  when:
+    - show_debug | default ('N') == 'Y'
+
+- name: Roll back conf work directories if the host is now in LSF_Servers role.
+  shell: |
+    rm -f {{ item.local }}; mv -f {{ item.bak }} {{ item.local }}
+  args:
+    removes: "{{ item.bak }}"
+    executable: /bin/bash
+  with_items:
+    - {local: "{{ LSF_CONF_DIR }}", bak: "{{ LSF_TOP }}/.conf_bak"}
+    - {local: "{{ LSF_WORK_DIR }}", bak: "{{ LSF_TOP }}/.work_bak"}
+  when:
+    - was_previously_master == 'Y'
+
+- name: Ensure LSF stopped
+  systemd:
+    name: lsfd
+    state: stopped
+  when:
+    - was_previously_master == 'Y'
+
+- name: Get LSF_Masters in reverse order
+  set_fact: server_hosts="{{ groups.LSF_Masters[::-1] | join(' ') }}"
+
+- name: debug
+  debug:
+    msg: "{{ server_hosts }}"
+  when:
+    - show_debug | default ('N') == 'Y'
+
+- name: See if LSF_SERVER_HOSTS exists in lsf.conf file
+  shell: |
+    sed -n -e '\@^\s\*LSF_SERVER_HOSTS=@ p' "{{ LSF_CONF_DIR }}/lsf.conf"
+  args:
+    executable: /bin/bash
+  register: lsf_server_hosts_parameter
+
+- name: Update LSF server hosts in the lsf.conf file
+  lineinfile:
+    dest: "{{ LSF_CONF_DIR }}/lsf.conf"
+    backrefs: yes
+    regexp: '^(LSF_SERVER_HOSTS=).*'
+    line: '\1"{{ server_hosts }}"'
+
+- name: Append LSF server hosts in the lsf.conf file
+  lineinfile:
+    dest: "{{ LSF_CONF_DIR }}/lsf.conf"
+    line: 'LSF_SERVER_HOSTS="{{ server_hosts }}"'
+  when: lsf_server_hosts_parameter.stdout == ""
+
+- name: Update LSF master list in the lsf.conf file
+  lineinfile:
+    dest: "{{ LSF_CONF_DIR }}/lsf.conf"
+    backrefs: yes
+    regexp: '^(LSF_MASTER_LIST=).*'
+    line: '\1"{{ groups.LSF_Masters | join(" ") }}"'
+
+- name: Update EGO master list in the ego.conf file
+  lineinfile:
+    dest: "{{ LSF_CONF_DIR }}/ego/{{ LSF.my_cluster_name | default('myCluster') }}/kernel/ego.conf"
+    backrefs: yes
+    regexp: '^(EGO_MASTER_LIST=).*'
+    line: '\1"{{ groups.LSF_Masters | join(" ") }}"'
+  when:
+    - ( groups['LSF_Masters'] | length > 0 )
+
+- name: Update LSF_GET_CONF=lim in lsf.conf
+  lineinfile:
+    dest: "{{ LSF_CONF_DIR }}/lsf.conf"
+    state: present
+    line: 'LSF_GET_CONF=lim'
+  when:
+    - ( inventory_hostname in lsf_server_hosts)
+    - nfs_deployment | default(False) == False
+
+- name: Switch to TCP protocol part1
+  lineinfile:
+    dest: "{{ LSF_CONF_DIR }}/lsf.conf"
+    state: present
+    line: 'LSF_CALL_LIM_WITH_TCP=Y'
+  when:
+    - USE_TCP | default(False) == True
+
+- name: Switch to TCP protocol part2
+  lineinfile:
+    dest: "{{ LSF_CONF_DIR }}/lsf.conf"
+    state: present
+    line: 'LSF_ANNOUNCE_MASTER_TCP_WAITTIME=0'
+  when:
+    - USE_TCP | default(False) == True
+
+- name: Switch to UDP protocol part1
+  lineinfile:
+    dest: "{{ LSF_CONF_DIR }}/lsf.conf"
+    state: absent
+    line: 'LSF_CALL_LIM_WITH_TCP=Y'
+  when:
+    - USE_TCP | default(False) == False
+
+- name: Switch to UDP protocol part2
+  lineinfile:
+    dest: "{{ LSF_CONF_DIR }}/lsf.conf"
+    state: absent
+    line: 'LSF_ANNOUNCE_MASTER_TCP_WAITTIME=0'
+  when:
+    - USE_TCP | default(False) == False
+
+- name: Make sure no LSF_GET_CONF=lim in lsf.conf on lsf/gui masters
+  lineinfile:
+    dest: "{{ LSF_CONF_DIR }}/lsf.conf"
+    state: absent
+    line: 'LSF_GET_CONF=lim'
+  when:
+    - ( inventory_hostname in hosts_in_HA_shared_dir)
+
+- name: Update LSF_QUERY_ES_FUNCTIONS in lsf.conf
+  lineinfile:
+    dest: "{{ LSF_CONF_DIR }}/lsf.conf"
+    backrefs: yes
+    regexp: '^[#]*(LSF_QUERY_ES_FUNCTIONS=.*)'
+    line: '\1'
+  when:
+    - groups.GUI_Hosts | length > 0
+
+- name: Update LSF_QUERY_ES_SERVERS in lsf.conf
+  lineinfile:
+    dest: "{{ LSF_CONF_DIR }}/lsf.conf"
+    backrefs: yes
+    regexp: '^[#]*(LSF_QUERY_ES_SERVERS=).*'
+    line: '\1"{{ ex_host_list }}"'
+  when:
+    - groups.GUI_Hosts | length > 0
+
+- name: Update LSF_ENABLE_BEAT_SERVICE in lsf.conf
+  lineinfile:
+    dest: "{{ LSF_CONF_DIR }}/lsf.conf"
+    line: 'LSF_ENABLE_BEAT_SERVICE="all"'
+    insertafter: '^[ ]*LSF_QUERY_ES_FUNCTIONS='
+  when:
+    - groups.GUI_Hosts | length > 0
+    - LSF.Enable_Monitoring | default(True) == True
+
+- name: Remove LSF_ENABLE_BEAT_SERVICE in lsf.conf
+  lineinfile:
+    dest: "{{ LSF_CONF_DIR }}/lsf.conf"
+    state: absent
+    line: 'LSF_ENABLE_BEAT_SERVICE="all"'
+  when:
+    - groups.GUI_Hosts | length > 0
+    - LSF.Enable_Monitoring | default(True) == False
+
+- name: Update LSF_LOGDIR in lsf.conf
+  lineinfile:
+    dest: "{{ LSF_CONF_DIR }}/lsf.conf"
+    backrefs: yes
+    regexp: '^(LSF_LOGDIR=).*'
+    line: '\1"{{ LSF_LOG_DIR }}"'
+
+- name: Update LSF_GPU_AUTOCONFIG in lsf.conf
+  lineinfile:
+    dest: "{{ LSF_CONF_DIR }}/lsf.conf"
+    state: present
+    line: 'LSF_GPU_AUTOCONFIG=Y'
+
+- name: Update LSB_GPU_NEW_SYNTAX in lsf.conf
+  lineinfile:
+    dest: "{{ LSF_CONF_DIR }}/lsf.conf"
+    state: present
+    line: 'LSB_GPU_NEW_SYNTAX=extend'
+
+- name: Update LSF_GET_CONF=lim in ego.conf
+  lineinfile:
+    dest: "{{ LSF_CONF_DIR }}/ego/{{ LSF.my_cluster_name | default('myCluster') }}/kernel/ego.conf"
+    state: present
+    line: 'EGO_GETCONF=lim'
+  when:
+    - ( inventory_hostname in lsf_server_hosts)
+    - nfs_deployment | default(False) == False
+
+- name: Make sure no EGO_GET_CONF=lim in ego.conf on lsf/gui masters
+  lineinfile:
+    dest: "{{ LSF_CONF_DIR }}/ego/{{ LSF.my_cluster_name | default('myCluster') }}/kernel/ego.conf"
+    state: absent
+    line: 'EGO_GETCONF=lim'
+  when:
+    - ( inventory_hostname in hosts_in_HA_shared_dir)
+
+- name: Update ESC_LOGDIR
+  lineinfile:
+    dest: "{{ LSF_CONF_DIR }}/ego/{{ LSF.my_cluster_name | default('myCluster') }}/eservice/esc/conf/egosc_conf.xml"
+    backrefs: yes
+    regexp: '^(\s*<ESC_LOGDIR>).*(</ESC_LOGDIR>)'
+    line: '\1{{ LSF_LOG_DIR }}\2'
+
+- name: Update resource names in lsf.shared
+  shell: |
+    if [ "x$(sed -n -e '/Begin[ \t]\+Resource/,/End[ \t]\+Resource/ { /[ \t]*{{ item.name }}[ \t]\+/p }' {{ LSF_CONF_DIR }}/lsf.shared )" = "x" ]; then
+       sed -i -e '/End[ \t]\+Resource/ i{{ item.line }}'  {{ LSF_CONF_DIR }}/lsf.shared
+    fi
+  args:
+    executable: /bin/bash
+  with_items:
+    - {name: "awshost", line: "#  awshost    Boolean    ()       ()       (instances from AWS)"}
+    - {name: "softlayerhost", line: "#  softlayerhost Boolean ()       ()       (instances from SoftLayer)"}
+    - {name: "azurehost", line: "#  azurehost  Boolean    ()       ()       (instances from Azure)"}
+    - {name: "rc_account", line: "   rc_account String     ()       ()       (account name for the external hosts)"}
+
+- name: Update LSF hosts file
+  script: ../../deploy-lsf-masters/files/configure_hosts_file.sh -p {{ LSF_CONF_DIR }}/hosts -c {{ LSF.my_cluster_name }} -b {{ LSF.Private_IPv4_Range | default('none') }} <<< "{% set list1 = [] %}{% set hosts = [] %}{% if hosts.append(inventory_hostname) %}{% endif %}{% for h in hosts %}{% if hostvars[h] is defined and hostvars[h].ansible_interfaces is defined %}{% for interface in hostvars[h].ansible_interfaces %}{% if interface != 'lo' %}{% set key='ansible_' + interface %}{% set addr = hostvars[h][key] %}{% if addr is defined and addr.active is defined and addr.active and addr.ipv4 is defined and addr.ipv4.address is defined %}{% set ip = addr.ipv4.address %}{% set line = ip + '=' + h + ',' + hostvars[h].ansible_fqdn | default('') + ',' + hostvars[h].ansible_hostname | default('') %}{% if list1.append(line) %}{% endif %}{% endif %}{% endif %}{% endfor %}{% endif %}{% endfor %}{% for line in hostvars[ansible_first_host]._master_ips %}{% set host = line | regex_replace('.*=\\d+\:(.*)','\\1') %}{% set ip = line | regex_replace('(.*)=\\d+\:.*','\\1') %}{% if list1.append(ip + '=' + host) %}{% endif -%}{% endfor %}{{ list1 | join (' ') }}"
+  args:
+    executable: /bin/bash
+  when:
+    - inventory_hostname not in groups.LSF_Masters
+    - LSF.Private_IPv4_Range is defined and LSF.Private_IPv4_Range != 'none' and LSF.Private_IPv4_Range is not none
+    - hostvars[ansible_first_host]._master_private_ips is defined
+    - hostvars[ansible_first_host]._master_private_ips | length  > 0
+
+- name: Remove entries in LSF hosts file
+  shell: |
+    ( hosts_file={{ LSF_CONF_DIR }}/hosts; HEADER="#BEGIN ANSIBLE MANAGED HOSTS"; FOOTER="#END ANSIBLE MANAGED HOSTS"; if [ -f "${hosts_file}" ]; then  sed -i -e '/'"${HEADER}"'/,/'"${FOOTER}"'/{/BEGIN[ \t]\+/b;/END[ \t]\+/b;d}' ${hosts_file}; fi; )
+  args:
+    executable: /bin/bash
+  when:
+    - inventory_hostname not in groups.LSF_Masters
+    - LSF.Private_IPv4_Range is not defined or LSF.Private_IPv4_Range == 'none' or LSF.Private_IPv4_Range is none

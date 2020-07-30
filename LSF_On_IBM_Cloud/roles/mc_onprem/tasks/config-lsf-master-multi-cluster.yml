@@ -1,0 +1,112 @@
+
+---
+# -----------------------------------
+#  Copyright IBM Corp. 1992, 2020. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+- fail:
+    msg: "missing variable definition: {{item}}"
+  when: vars[item] is undefined
+  loop:
+    - LSF_CONF_DIR
+    - CLOUD_LSF_CLUSTER_NAME
+    - LOCAL_LSF_CLUSTER_NAME
+    - cloud_master
+    - onprem_master
+    - RC_HOSTS_NAME
+    - sndqueue
+    - gen_files_dir
+
+- debug:
+    msg: "variable definition: {{item.k}}: {{item.v}}"
+  loop:
+    - { k: "LSF_CONF_DIR",           v: "{{LSF_CONF_DIR}}" }
+    - { k: "CLOUD_LSF_CLUSTER_NAME", v: "{{CLOUD_LSF_CLUSTER_NAME}}" }
+    - { k: "LOCAL_LSF_CLUSTER_NAME", v: "{{LOCAL_LSF_CLUSTER_NAME}}" }
+    - { k: "cloud_master",           v: "{{cloud_master}}" }
+    - { k: "onprem_master",          v: "{{onprem_master}}" }
+    - { k: "RC_HOSTS_NAME",          v: "{{RC_HOSTS_NAME}}" }
+    - { k: "sndqueue",               v: "{{sndqueue}}" }
+    - { k: "gen_files_dir",          v: "{{gen_files_dir}}" }
+
+
+# Modify the LSF lsf.shared file
+- name: Update lsf.shared to add Servers
+  lineinfile:
+    dest: "{{ LSF_CONF_DIR }}/lsf.shared"
+    backrefs: yes
+    state: present
+    regexp: '^ClusterName.*'
+    line: 'ClusterName     Servers                 # Keyword'
+    backup: yes
+  notify: restart lsf
+
+- name: Update on-premise cluster info with master host name in lsf.shared
+  lineinfile:
+    dest: "{{ LSF_CONF_DIR }}/lsf.shared"
+    state: present
+    backrefs: yes
+    regexp: "^{{ LOCAL_LSF_CLUSTER_NAME }}.*"
+    line: '{{ LOCAL_LSF_CLUSTER_NAME }}        {{ onprem_master }}'
+    backup: yes
+  notify: restart lsf
+
+- name: Append on-cloud cluster info into lsf.shared
+  lineinfile:
+    dest: "{{ LSF_CONF_DIR }}/lsf.shared"
+    state: present
+    insertbefore: "^End Cluster.*"
+    line: '{{ CLOUD_LSF_CLUSTER_NAME | default("myCloudCluster") }} {{ cloud_master }}'
+    backup: yes
+  notify: restart lsf
+
+- name: Update LSF cluster file
+  lineinfile:
+    dest: "{{ LSF_CONF_DIR }}/lsf.cluster.{{ LOCAL_LSF_CLUSTER_NAME }}"
+    state: present
+    insertafter: "^Begin Parameters.*"
+    backup: yes
+    line: "PRODUCTS=LSF_Make LSF_Base LSF_Manager LSF_MultiCluster"
+  notify: restart lsf
+
+#update lsb.queue to add receive request queue
+- name: Update the lsb.queue file
+  blockinfile:
+    dest: "{{ LSF_CONF_DIR }}/lsbatch/{{ LOCAL_LSF_CLUSTER_NAME }}/configdir/lsb.queues"
+    backup: yes
+    block: |
+      Begin Queue
+      QUEUE_NAME   = {{ sndqueue }}
+      SNDJOBS_TO    = recOnprem@{{ CLOUD_LSF_CLUSTER_NAME }}
+      PRIORITY      = 40
+      DESCRIPTION   = Sample Queue for send cluster request to cloud
+      End Queue
+  notify: restart lsf
+
+- name: Clear the hosts file
+  shell: grep -v "{{ SERVER_IP }}" hosts > hosts.WRK ; mv hosts.WRK hosts
+  args:
+    chdir "{{ LSF_CONF_DIR }}"
+
+- name: Create a host file
+  vars:
+    cloud_hosts: "{{groups.master | union( groups.worker ) }}"
+    requested_interfaces: "{{multicluster.onprem.interfaces | default(ansible_interfaces)}}"
+  template:
+    src: ../templates/hosts-lsf.j2
+    dest: "{{ LSF_CONF_DIR }}/hosts"
+    follow: yes
+
+- name: Copy LSF host file to a common location
+  copy:
+    src: "{{ LSF_CONF_DIR }}/hosts"
+    dest: "{{ gen_files_dir }}/hosts-lsf"
+    follow: yes
+
+# - name: Archive the playbook for provisoning lsf servers
+#   shell: tar cvf deploy-lsf-server.tar Storage-config.yml inventory_ec2servers.yml inventory_ec2.yml make-lsf-server.yml lsf-inventory roles/ group_vars/ template/ AWS/
+# #  shell: tar cvf deploy-lsf-server.tar Storage-config.yml inventory_ec2servers.yml make-lsf-server.yml lsf-inventory roles/ group_vars/ template/ AWS/
+#   args:
+#     chdir: "{{ gen_files_dir }}"

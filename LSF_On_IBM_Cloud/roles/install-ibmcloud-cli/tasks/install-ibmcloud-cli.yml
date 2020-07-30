@@ -1,0 +1,18 @@
+---
+# -----------------------------------
+#  Copyright IBM Corp. 2020. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+- fail:
+    msg: "extra variable GEN2_region needs to be defined when running this"
+  when: GEN2_region is undefined or GEN2_region == ""
+
+- name: Install IBM CLOUD CLI
+  shell: curl -sL https://ibm.biz/idt-installer | bash &&
+         ibmcloud login -r {{ GEN2_region }} &&
+         ibmcloud plugin install vpc-infrastructure -f &&
+         ibmcloud plugin install cloud-dns-services -f &&
+         ibmcloud is target --gen 2
+  become: yes

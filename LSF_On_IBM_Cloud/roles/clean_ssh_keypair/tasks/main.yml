@@ -1,0 +1,19 @@
+---
+# -----------------------------------
+#  Copyright IBM Corp. 2020. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+- include_tasks: "../../common/tasks/get_files_dir.yml"
+  when: gen_files_dir is undefined or gen_files_dir == ""
+
+- name: clean generated ssh files
+  file:
+    path: "{{ gen_files_dir }}/{{item}}"
+    state: absent
+  loop:
+    - id_rsa
+    - id_rsa.pub
+    - id_rsa.lsfadmin
+    - id_rsa.lsfadmin.pub

@@ -1,0 +1,49 @@
+---
+# -----------------------------------
+#  Copyright IBM Corp. 1992,2020. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+
+- include_tasks: "../../common/tasks/get_files_dir.yml"
+  when: gen_files_dir is undefined or gen_files_dir == ""
+
+- name: Add masters ssh-key to authorized users
+  authorized_key:
+    user: root
+    key: "{{ lookup('file', '{{ gen_files_dir }}/id_rsa.pub') }}"
+
+- name: Update the /etc/hosts file with node names
+  lineinfile:
+    dest: "/etc/hosts"
+    regexp: ".*\t{{ hostvars[item]['ansible_hostname']}}\t{{ hostvars[item]['ansible_hostname']}}"
+    line: "{{ hostvars[item]['ansible_default_ipv4']['address'] }}\t{{ hostvars[item]['ansible_hostname']}}\t{{ hostvars[item]['ansible_hostname']}}"
+    state: present
+    backup: yes
+#  when: ansible_hostname != item or ansible_hostname == item  (double-check tautology)
+  loop: "{{ groups['compute'] }}"
+
+- name: Update the /etc/hosts template file with node names
+  lineinfile:
+    dest: "/etc/cloud/templates/hosts.redhat.tmpl"
+    regexp: ".*\t{{ hostvars[item]['ansible_hostname']}}\t{{ hostvars[item]['ansible_hostname']}}"
+    line: "{{ hostvars[item]['ansible_default_ipv4']['address'] }}\t{{ hostvars[item]['ansible_hostname']}}\t{{ hostvars[item]['ansible_hostname']}}"
+    state: present
+    backup: yes
+#  when: ansible_hostname != item or ansible_hostname == item (double-check tautology)
+  loop: "{{ groups['compute'] }}"
+
+- name: Turn on passkey authentication in sshd config
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    backrefs: yes
+    regexp: '(PubkeyAuthentication)'
+    line: '\1 yes'
+
+- name: Turn off password authentication in sshd config
+  lineinfile:
+    dest: /etc/ssh/sshd_config
+    backrefs: yes
+    regexp: '^(PasswordAuthentication).*'
+    line: '\1 no'

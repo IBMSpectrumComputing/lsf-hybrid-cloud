@@ -1,0 +1,37 @@
+---
+# -----------------------------------
+#  Copyright IBM Corp. 1992,2020. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+- name: Run the actual deployment on the deployer
+  command: "ansible-playbook -i lsf-inventory lsf-deploy.yml"
+  args:
+    chdir: /opt/ibm/lsf_installer/playbook
+
+- name: Fetch the ansible.log file
+  fetch:
+    src: /opt/ibm/lsf_installer/playbook/ansible.log
+    dest: "{{ playbook_dir }}/deployer_ansible.log-{{ ansible_hostname }}"
+    flat: yes
+
+# no longer necessary to run subsequent ansible scripts on destination (master)
+# - name: Download specific ansible version rpm
+#   get_url:
+#     dest: /root
+#     url: https://cbs.centos.org/kojifiles/packages/ansible/2.8.0/2.el7/noarch/ansible-2.8.0-2.el7.noarch.rpm
+
+# - name: Install ansible 2.8
+#   yum:
+#     name: /root/ansible-2.8.0-2.el7.noarch.rpm
+#     state: present
+
+- name: Set LSF_SEND_CONFINFO_TCP_THRESHOLD in lsf.conf to avoid more UDP problems
+  lineinfile:
+    path: /opt/ibm/lsfsuite/lsf/conf/lsf.conf
+    line: "LSF_SEND_CONFINFO_TCP_THRESHOLD=1200"
+
+- name: Wait for a minute for things to settle
+  pause:
+    minutes: 1

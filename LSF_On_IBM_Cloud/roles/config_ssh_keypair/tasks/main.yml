@@ -1,0 +1,19 @@
+---
+# -----------------------------------
+#  Copyright IBM Corp. 1992,2020. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+- include_tasks: "../../common/tasks/get_files_dir.yml"
+  when: gen_files_dir is undefined or gen_files_dir == ""
+
+- name: Generate ssh-key pair for the master
+  command: "ssh-keygen -q -t rsa -f {{ gen_files_dir }}/id_rsa -C \"root@{{ hostvars[groups['master'][0]]['inventory_hostname'] }}\" -N \"\""
+  args:
+    creates: "{{ gen_files_dir }}/id_rsa"
+
+- name: Generate ssh-key pair for lsfadmin
+  command: "ssh-keygen -q -t rsa -f {{ gen_files_dir }}/id_rsa.lsfadmin -C \"lsfadmin@{{ hostvars[groups['master'][0]]['inventory_hostname'] }}\" -N \"\""
+  args:
+    creates: "{{ gen_files_dir }}/id_rsa.lsfadmin"

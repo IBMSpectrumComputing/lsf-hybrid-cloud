@@ -1,0 +1,156 @@
+---
+# -----------------------------------
+#  Copyright IBM Corp. 2020. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+- include_tasks: "../../common/tasks/get_files_dir.yml"
+  when: gen_files_dir is undefined or gen_files_dir == ""
+
+
+- name: Retrieve VPN GW info from file
+  vars:
+    vpn_file: "{{gen_files_dir}}/vpn.yml"
+  set_fact:
+    vpn_cn: "{{ lookup('file', vpn_file) | from_yaml }}"
+
+- debug:
+    msg: "{{vpn_cn}}"
+
+- include_tasks: "../../common/tasks/target_region.yml"
+  vars:
+    target_region: "{{vpn_cn.region}}"
+
+- fail:
+    msg: "VPN Connection block not found in vpn.yml. Is the connection already cleaned?"
+  when:
+    - vpn_cn.id is undefined
+    - vpn_cn.local_cidrs is undefined
+    - vpn_cn.new_ike_id is undefined
+    - vpn_cn.new_ips_id is undefined
+
+######################################################
+# VPN Connection
+- name: "Check if VPN Connection exists"
+  command:
+    argv:
+      - ibmcloud
+      - is
+      - vpn-cns
+      - "{{vpn_cn.vpn_gateway}}"
+      - --json
+  register: vpn_list_output
+
+# need to extract id and local_cidrs from existing vpn-connection output since both are needed
+# for the vpn.yml file block
+- vars:
+    vpn_cn_name: "{{vpn_cn.conn_name}}"
+    query: "[?name==`{{vpn_cn_name}}`].{id: id, local_cidrs: local_cidrs}"
+  set_fact:
+    vpn_exist: "{{vpn_list_output.stdout|from_json | json_query(query) | first | default('')}}"
+
+- name: Disconnect/destroy VPN Connection using cloud CLI
+  command:
+    argv:
+      - ibmcloud
+      - is
+      - vpn-cnd
+      - "{{vpn_cn.vpn_gateway}}"
+      - "{{vpn_cn.id}}"
+      - --force
+  register: vpn_cn_output
+  when:
+    - vpn_cn.id is defined and vpn_exist.id is defined and vpn_cn.id == vpn_exist.id
+    - vpn_exist.id is defined and vpn_exist.id != ""
+
+- name: Wait for the VPN Connection to terminate
+  pause:
+    minutes: 1
+  when: vpn_cn_output is defined and vpn_cn_output.changed == true
+
+######################################################
+# IKE Policy
+
+# new_ike_exist:   contains id if a newly created ike still exists and needs to be destroyed (otherwise: empty)
+
+- name: "Check for IKE policy"
+  command:
+    argv:
+      - ibmcloud
+      - is
+      - ikes
+      - --json
+  register: ike_list_output
+
+- set_fact:
+    new_ike_exist: ""
+  when: vpn_cn.new_ike_id is undefined or vpn_cn.new_ike_id == ""
+
+- vars:
+    ike_name: "{{vpn_cn.new_ike_id}}"
+    query: "[?id==`{{ike_name}}`].id"
+  set_fact:
+    new_ike_exist: "{{ike_list_output.stdout|from_json | json_query(query) | first | default('')}}"
+  when: vpn_cn.new_ike_id is defined and vpn_cn.new_ike_id != ""
+
+- name: Cleanup IKE policy
+  command:
+    argv:
+      - ibmcloud
+      - is
+      - iked
+      - "{{new_ike_exist}}"
+      - --force
+  register: ike_output
+  when:
+    - new_ike_exist is defined and new_ike_exist != ""
+
+
+######################################################
+# IPSEC Policy
+
+# new_ipsec_exist:   contains id if a newly created ipsec still exists and needs to be destroyed (otherwise: empty)
+- name: "Check for IPSEC policy"
+  command:
+    argv:
+      - ibmcloud
+      - is
+      - ipsecs
+      - --json
+  register: ipsec_list_output
+
+- set_fact:
+    new_ipsec_exist: ""
+  when: vpn_cn.new_ipsec_id is undefined or vpn_cn.new_ipsec_id == ""
+
+- vars:
+    ipsec_name: "{{vpn_cn.new_ips_id}}"
+    query: "[?id==`{{ipsec_name}}`].id"
+  set_fact:
+    new_ipsec_exist: "{{ipsec_list_output.stdout|from_json | json_query(query) | first | default('')}}"
+  when: vpn_cn.new_ips_id is defined and vpn_cn.new_ips_id != ""
+
+- name: Cleanup IPSEC policy
+  command:
+    argv:
+      - ibmcloud
+      - is
+      - ipsecd
+      - "{{new_ipsec_exist}}"
+      - --force
+  register: ipsec_output
+  when:
+    - new_ipsec_exist is defined and new_ipsec_exist != ""
+
+
+##########################################################
+# state-file cleanup
+- name: Clean VPN-Connection data from file
+  vars:
+    vpc_dir: "{{ gen_files_dir }}"
+    vpn_cn: "{{vpn_cn_output.stdout|from_json}}"
+  blockinfile:
+    path: "{{vpc_dir}}/vpn.yml"
+    marker: "# {mark} ANSIBLE MAINTAINED BLOCK FOR VPN CONNECTION"
+    state: absent

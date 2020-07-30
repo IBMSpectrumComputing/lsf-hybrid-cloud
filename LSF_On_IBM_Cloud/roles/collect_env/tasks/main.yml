@@ -1,0 +1,55 @@
+---
+
+# -----------------------------------
+#  Copyright IBM Corp. 1992, 2020. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+- include_tasks: "../../common/tasks/get_files_dir.yml"
+  when: gen_files_dir is undefined or gen_files_dir == ""
+
+- set_fact:
+    etc_gen_dir: "{{ gen_files_dir }}/etc"
+
+- name: Make local files directory
+  file:
+    path: "{{etc_gen_dir}}"
+    state: directory
+
+- name: Gather the hosts entries
+  shell: getent hosts | grep -v localhost | grep -v '127.0.0.1' > "{{ etc_gen_dir }}/hosts"
+  become: yes
+
+- name: Gather the users (passwd) entries
+  shell: getent passwd |awk -F':' '$3 >= 1000 { print $0 } '|grep -v nfsnobody > "{{ etc_gen_dir }}/passwd" ; echo "ok"
+  become: yes
+
+- name: Gather the users (shadow) entries
+  shell: getent shadow > "{{ etc_gen_dir }}/shadow.tmp" ; cat /dev/null > "{{ etc_gen_dir }}/shadow" ; echo "ok"
+  become: yes
+
+- name: Extract the users (shadow) entries
+  shell: for i in $(awk -F':' '{ print $1 }' "{{ etc_gen_dir }}/passwd" |sort); do grep -e "^$i:" "{{ etc_gen_dir }}/shadow.tmp" >> "{{ etc_gen_dir }}/shadow" ; done ; echo "ok"
+  become: yes
+
+- file:
+    path: "{{ etc_gen_dir }}/shadow.tmp"
+    state: absent
+
+- name: Gather the users (group) entries
+  shell: getent group |awk -F':' '$3 >= 1000 { print $0 }' |grep -v nfsnobody > "{{ etc_gen_dir }}/group" ; echo "ok"
+  become: yes
+
+- name: Make sure the files are accessible by the ansible user (if different from root)
+  file:
+    path: "{{ etc_gen_dir }}/{{ item }}"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user_gid }}"
+  with_items:
+    - 'passwd'
+    - 'group'
+    - 'shadow'
+    - 'hosts'
+  become: yes
+  when: ansible_user != "root"

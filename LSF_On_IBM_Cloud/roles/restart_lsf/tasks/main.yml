@@ -1,0 +1,16 @@
+---
+# -----------------------------------
+#  Copyright IBM Corp. 2020. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+- name: Restart sshd service
+  service:
+    name: sshd
+    state: restarted
+
+- name: Restart LSFD on all servers
+  service:
+    name: lsfd
+    state: restarted

@@ -1,0 +1,123 @@
+---
+# -----------------------------------
+#  Copyright IBM Corp. 2020. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+- hosts: tfhost
+  vars:
+    vpc_type: "privateIP"
+  tasks:
+    - include_tasks: "roles/common/tasks/get_files_dir.yml"
+      when: gen_files_dir is undefined
+
+    - name: "Check for terraform vars file"
+      stat:
+        path: "{{gen_files_dir}}/terraform.tfvars"
+      register: tfvars_stat
+      failed_when: tfvars_stat.stat.exists != true
+
+    - name: "Copy terraform state file from {{gen_files_dir}}"
+      copy:
+        src: "{{gen_files_dir}}/terraform.tfstate"
+        dest: "{{playbook_dir}}/terraform/{{vpc_type}}/terraform.tfstate"
+        force: yes
+        remote_src: yes
+
+    - name: "Terraform clean a VPC on IBM cloud"
+      terraform:
+        project_path: "{{playbook_dir}}/terraform/{{vpc_type}}"
+        variables_file: "{{gen_files_dir}}/terraform.tfvars"
+        state_file: "{{gen_files_dir}}/terraform.tfstate"
+        binary_path: "{{tfbinary_path|default('/usr/bin')}}/terraform"
+        state: absent
+      register: tf_output
+      # need to continue because partial cleanup will have an updated tfstate file that we need to preserve
+      ignore_errors: yes
+
+    - name: "output"
+      debug:
+        msg: "{{tf_output}}"
+
+    - name: "Copy terraform state file in case something went wrong"
+      copy:
+        dest: "{{playbook_dir}}/terraform/{{vpc_type}}/terraform.tfstate"
+        src: "{{gen_files_dir}}/terraform.tfstate"
+        force: yes
+        remote_src: yes
+
+    - name: "create backup of some generated files directory after successful cleanup"
+      command: "mv {{gen_files_dir}} {{gen_files_dir}}-{{ansible_date_time.iso8601_basic_short}}.backup"
+      when: tf_output.failed == false
+
+    - block:
+        - name: "List remaining allocated resources (according to terraform)"
+          command:
+            argv:
+              - "{{tfbinary_path}}/terraform"
+              - state
+              - list
+          args:
+            chdir: "{{playbook_dir}}/terraform/{{vpc_type}}"
+          register: tfstate_output
+
+        - debug:
+            msg: |
+              "{{tfstate_output.stdout_lines}}
+              
+               Please go to {{playbook_dir}}/terraform/{{vpc_type}} to attempt manual fix.
+               use terraform commands with: '-var-file={{gen_files_dir}}/terraform.tfvars' "
+
+        - name: "collect list of remaining allocated resources"
+          command:
+            argv:
+              - ibmcloud
+              - is
+              - "{{item}}"
+              - --json
+          register: rsrc_output
+          ignore_errors: yes
+          loop:
+            - vpcs
+            - subnets
+            - vpns
+            - vols
+            - sgs
+            - pubgws
+            - nwacls
+            - ipsecs
+            - ins
+            - images
+            - ips
+
+        # - debug:
+        #     msg: "{{ item }}"
+        #   loop: "{{ rsrc_output.results }}"
+
+        - name: "Filter results for ID and Name entries"
+          set_fact:
+            rsc_data: "{{ rsc_data | default([]) | union( item.stdout | from_json ) |  json_query('[*].{ name: name, id: id }') }}"
+          loop: "{{ rsrc_output.results }}"
+          when: item.failed == false
+          no_log: yes
+
+        - name: "Extract resources that contain: {{resource_prefix}}"
+          set_fact:
+            data: "{{ data | default([]) | union( [ item ] ) }}"
+          when: item.name is search(resource_prefix)
+          loop: "{{ rsc_data }}"
+          no_log: yes
+
+        - name: "Listing the remaining resources that terraform failed to destroy"
+          debug:
+            msg: "{{ data }}"
+          when: data is defined
+
+      #block
+      when: tf_output.failed == true
+
+    - name: "Final failure statement"
+      fail:
+        msg: "Terraform failed with error"
+      when: tf_output.failed == true

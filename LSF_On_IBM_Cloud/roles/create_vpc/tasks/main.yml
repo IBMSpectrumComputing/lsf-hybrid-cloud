@@ -1,0 +1,82 @@
+---
+# -----------------------------------
+#  Copyright IBM Corp. 2020. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+# pulls vpc_type variable from vars
+
+
+- name: "Check for existence of generated files dir for potential previous/partial state"
+  stat:
+    path: "{{gen_files_dir}}/terraform.tfstate"
+  register: vpc_dir_stat
+  ignore_errors: yes
+
+- name: "Create vpc files directory"
+  file:
+    path: "{{gen_files_dir}}"
+    state: directory
+  when: vpc_dir_stat.failed == true or vpc_dir_stat.stat.exists == false
+
+- name: "Create terraform variable file"
+  vars:
+    vpn_cidrs: "[ {% for c in vpn_peer.cidrs %} {{c}}, {% endfor %} ]"
+  template:
+    src: "terraform.tfvars.j2"
+    dest: "{{gen_files_dir}}/terraform.tfvars"
+
+- name: "make sure the terraform directory is free of residual state/vars"
+  file:
+    path: "{{playbook_dir}}/terraform/{{vpc_type}}/{{item}}"
+    state: absent
+  loop:
+    - terraform.tfvars
+    - terraform.tfstate
+  when: vpc_dir_stat.failed == true or vpc_dir_stat.stat.exists == false
+
+- name: "Recreate partial state from previous run"
+  copy:
+    src: "{{gen_files_dir}}/terraform.tfstate"
+    dest: "{{playbook_dir}}/terraform/{{vpc_type}}/terraform.tfstate"
+  when: vpc_dir_stat.failed == false and vpc_dir_stat.stat.exists == true
+
+- name: "Terraform init"
+  command:
+    cmd: "{{tfbinary_path}}/terraform init"
+    chdir: "{{playbook_dir}}/terraform/{{vpc_type}}"
+    creates: "{{playbook_dir}}/terraform/{{vpc_type}}/.terraform"
+
+- name: "Terraform a VPC on IBM cloud"
+  terraform:
+    project_path: "{{playbook_dir}}/terraform/{{vpc_type}}"
+    variables_file: "{{gen_files_dir}}/terraform.tfvars"
+    binary_path: "{{tfbinary_path|default('/usr/bin')}}/terraform"
+    state: present
+  register: tf_output
+  # need to continue because partial creation will generate an updated tfstate file that we need to preserve
+  ignore_errors: yes
+
+- name: "output"
+  debug:
+    msg: "{{tf_output}}"
+
+- name: "Copy tfstate file to correct location"
+  fetch:
+    src: "{{playbook_dir}}/terraform/{{vpc_type}}/terraform.tfstate"
+    dest: "{{gen_files_dir}}/terraform.tfstate"
+    fail_on_missing: yes
+    flat: yes
+
+- name: "Clean default terraform.tfstate file"
+  file:
+    path: "{{playbook_dir}}/terraform/{{vpc_type}}/terraform.tfstate"
+    state: absent
+
+- name: "Copy tf_inventory to {{gen_files_dir}}"
+  command:
+    argv:
+      - cp
+      - "{{inventory_file}}"
+      - "{{gen_files_dir}}"
