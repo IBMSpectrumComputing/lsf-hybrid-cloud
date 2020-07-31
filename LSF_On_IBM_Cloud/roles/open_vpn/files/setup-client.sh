@@ -5,7 +5,6 @@
 #  restricted by GSA ADP Schedule Contract with IBM Corp.
 # -----------------------------------
 #
-# 2020-06-30 Marc Dombrowa
 # Setup OpenVPN client on-premise
 
 print_settings=0

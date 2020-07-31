@@ -5,7 +5,6 @@
 #  restricted by GSA ADP Schedule Contract with IBM Corp.
 # -----------------------------------
 #
-# 2020-06-16 Marc Dombrowa
 # Setup OpenVPN Sever in IBM Cloud VPC instance
 
 # verbosity 

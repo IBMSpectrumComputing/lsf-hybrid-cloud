@@ -5,7 +5,6 @@
 #  restricted by GSA ADP Schedule Contract with IBM Corp.
 # -----------------------------------
 #
-# 2020-07-03 Marc Dombrowa
 # Function to create VPN server on IBM Cloud and client on IBM Watson site 
 # to allow LSF master to master communication
 # Switched to centos, RH, Fedora due to LSF requirement
