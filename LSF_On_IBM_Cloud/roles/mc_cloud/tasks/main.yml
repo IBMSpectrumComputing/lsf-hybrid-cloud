@@ -1,0 +1,45 @@
+---
+# -----------------------------------
+#  Copyright IBM Corp. 1992,2020. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+- fail:
+    msg: "missing variable definition: {{item.k}} in group_vars/lsf_install"
+  when: item.v == None
+  loop:
+    - {k: 'multicluster.cloud.conf_dir',      v: "{{multicluster.cloud.conf_dir|default(None)}}" }
+    - {k: 'lsf_cluster_name',                 v: "{{lsf_cluster_name|default(None)}}" }
+    - {k: 'multicluster.onprem.cluster_name', v: "{{multicluster.onprem.cluster_name|default(None)}}" }
+    - {k: 'multicluster.onprem.host',         v: "{{multicluster.onprem.host|default(None)}}" }
+    - {k: 'multicluster.onprem.ip',           v: "{{multicluster.onprem.ip|default(None)}}" }
+    - {k: 'rescon.machines',                  v: "{{rescon.machines|default(None)}}" }
+
+- name: "Setup Cloud LSF Master for multi-cluster"
+  include_tasks: config_multi_cluster.yml
+  vars:
+    default_onprem: "{{hostvars[groups['local'][0]]['ansible_hostname']}}"
+    LSF_CONF_DIR: "{{multicluster.cloud.conf_dir}}"
+    CLOUD_LSF_CLUSTER_NAME: "{{lsf_cluster_name}}"
+    LOCAL_LSF_CLUSTER_NAME: "{{multicluster.onprem.cluster_name}}"
+    RC_HOSTS_NAME: "{{rescon.machines}}"
+    cloud_master: "{{hostvars[groups['master'][0]]['ansible_hostname']}}"
+    onprem_master: "{{ multicluster.onprem.host | default(default_onprem) }}"
+
+
+# todo: the 3 host entries likely require fqdn in some cases
+- name: "Add On-prem-master to hosts file"
+  vars:
+    default_onprem: "{{hostvars[groups['local'][0]]['ansible_hostname']}}"
+    ip: "{{multicluster.onprem.ip}}"
+    host: "{{multicluster.onprem.host | default(default_onprem) }}"
+  lineinfile:
+    line: "{{ip}}    {{host}}   {{host}}   {{host}}"
+    path: "{{multicluster.cloud.conf_dir}}/hosts"
+    state: present
+    create: yes
+    mode: u=rw,go=r
+    owner: lsfadmin
+    group: root
+  become: yes

@@ -1,0 +1,24 @@
+---
+# -----------------------------------
+#  Copyright IBM Corp. 1992,2020. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+- fail:
+    msg: "missing variable definition before inclusion of configure_dm: {{item.k}}"
+  when: item.v == None
+  loop:
+    - { k: 'lsf_conf_dir',           v: "{{lsf_conf_dir|default(None)}}" }
+    - { k: 'lsf_cluster_name_local', v: "{{lsf_cluster_name_local|default(None)}}" }
+    - { k: 'lsf_cluster_name_peer',  v: "{{lsf_cluster_name_peer|default(None)}}" }
+    - { k: 'peer',                   v: "{{peer|default(None)}}" }
+    - { k: 'peer.host',              v: "{{peer.host|default(None)}}" }
+    - { k: 'peer.port',              v: "{{peer.port|default(None)}}" }
+
+- name: Add peer cluster info to datamanager config file
+  lineinfile:
+    path: "{{ lsf_conf_dir }}/lsf.datamanager.{{ lsf_cluster_name_local }}"
+    insertbefore: "^End RemoteDataManagers"
+    line: "{{ lsf_cluster_name_peer }}     ({{ peer.host }})    {{peer.port}}"
+  notify: "restart lsf"

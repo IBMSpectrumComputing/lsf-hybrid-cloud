@@ -1,0 +1,47 @@
+---
+# -----------------------------------
+#  Copyright IBM Corp. 1992,2020. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+- name: Copy the LSF installer to the deployer machine
+  copy:
+    src: "{{ lsf.installer.local_path }}/{{ lsf.installer.bin }}"
+    dest: "{{ lsf.installer.target_path }}"
+    force: no
+
+- name: Change permissions for installer to executable
+  file:
+    path: "{{ lsf.installer.target_path }}/{{ lsf.installer.bin }}"
+    mode: "0700"
+
+- name: Install necessary packages
+  yum:
+    name: [httpd, createrepo, emacs-nox, rsync, yum-utils, ipmitool, net-tools, lsof, bc, unzip]
+    state: latest
+
+- name: Extract the deployer, and accept the license agreement
+  command: "{{ lsf.installer.target_path }}/{{ lsf.installer.bin }}"
+  args:
+    creates: /opt/ibm/lsf_installer/playbook/lsf-inventory
+    stdin: |
+      1
+
+
+
+- name: Create soft link to lsf_install/playbook in /root
+  file:
+    path: "{{ lsf.installer.target_path }}/installer_playbook"
+    src: /opt/ibm/lsf_installer/playbook
+    state: link
+
+- name: Create soft link to lsfsuite/lsf/conf in /root # doesn't exist yet
+  file:
+    path: "{{ lsf.installer.target_path }}/lsf_conf"
+    src: /opt/ibm/lsfsuite/lsf/conf
+    state: link
+    force: yes
+
+- name: Set up NFS server on deployer
+  include: nfs_server.yml

@@ -1,0 +1,81 @@
+---
+# -----------------------------------
+#  Copyright IBM Corp. 2020. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+tfhost:
+  vars:
+    # Steps to generate the api key
+    # 1. ibmcloud login --sso
+    # 2. ibmcloud iam api-key-create <api-key-name> --file <ibmcloud-api-key.txt> -d "my api key for IBM Cloud"
+    # 3. Retrieve the apikey value from the <ibmcloud-api-key.txt> file
+
+    # 4. api_key is no longer stored in this file. Please do:
+    #     export IBMCLOUD_API_KEY=<your_api_key>
+
+    vpc_region: "your-vpc-region"
+    vpc_zone: "your-vpc-zone"
+    resource_prefix: "your-resource-prefix"
+
+    domain_name: "your.cloud.domain"
+    worker_nodes: 2
+    master_nodes: 1
+
+    # specify your ssh key name on the data center
+    key_name: "your-vpc-key"
+
+    # specify the ssh-key filename to use
+    # default should be id_rsa unless you're using
+    # a non-default key-file for your VPC access
+    # the file that's used will be: ~/.ssh/<ssh_key_file>[.pub]
+    ssh_key_file: "id_rsa"
+
+    # name of the lsf cluster you will install
+    lsf_cluster_name: <lsf-cluster-name>
+
+    # the profile for different types of VMs
+    worker_profile: "bx2-2x8"
+    master_profile: "bx2-4x16"
+    login_profile: "cx2-2x4"
+
+    # Can only be centos/RedHat as ansible scripts are based on centos.
+    image_name: "ibm-centos-7-6-minimal-amd64-2"
+    volume_capacity: 100
+    volume_dir: "/mnt/nfs"
+
+    # VPN peer (local) configuration
+    # you might want to use vault for the psk by generating the string:
+    #    echo -n <your_key> | ansible-vault encrypt_string --ask-vault-pass
+    # most of this info will be used to pre-fill the generated vpn.yml file
+    # anything you fill in here will not be needed to be filled in later
+    vpn_peer:
+      address: "peer-vpn-ip"
+      cidrs: [ "peer-vpn-subnet" ]  # can be a list
+      psk: "<add your psk here>"
+      # settings for security policies to pre-fill the generated vpn.yml file
+      security:
+        auth: "sha1"
+        encr: "aes256"
+        DH_Group: 2
+        ip_sec:
+          key_lifetime: 3600
+          PFS: "disabled"
+        ike:
+          version: 2
+          key_lifetime: 86400
+
+
+    # terraform + plugin locations (for local machine only)
+    # tfuser defaults to ansible user
+    tfbinary_path: "/usr/local/bin/terraform"
+    tfplugin_path: "~/.terraform.d/plugins"
+    #tfuser: <username>
+
+  hosts:
+    # recommended to keep it at localhost
+    # note this is only the machine that drives
+    # terraform-based allocation of VPC resources
+    localhost:
+      ansible_connection: local

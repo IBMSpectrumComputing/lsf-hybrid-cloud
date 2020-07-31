@@ -1,0 +1,48 @@
+---
+# -----------------------------------
+#  Copyright IBM Corp. 1992,2020. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+- include_tasks: "roles/common/tasks/get_files_dir.yml"
+  when: gen_files_dir is undefined or gen_files_dir == ""
+
+- fail:
+    msg: "missing variable definition: {{item.k}} in group_vars/lsf_install"
+  when: item.v == None
+  loop:
+    - {k: 'multicluster.onprem.conf_dir',     v: "{{multicluster.onprem.conf_dir|default(None)}}" }
+    - {k: 'multicluster.onprem.cluster_name', v: "{{multicluster.onprem.cluster_name|default(None)}}" }
+    - {k: 'multicluster.sndqueue',            v: "{{multicluster.sndqueue|default(None)}}" }
+    - {k: 'rescon.machines',                  v: "{{rescon.machines|default(None)}}" }
+    - {k: 'vpn.ip',                           v: "{{vpn.ip|default(None)}}" }
+    - {k: 'lsf_cluster_name',                 v: "{{lsf_cluster_name|default(None)}}" }
+
+
+- name: "Setup Cloud LSF Master for multi-cluster"
+  vars:
+    default_onprem: "{{hostvars[groups['local'][0]]['ansible_hostname']}}"
+    LSF_CONF_DIR: "{{multicluster.onprem.conf_dir}}"
+    CLOUD_LSF_CLUSTER_NAME: "{{lsf_cluster_name}}"
+    LOCAL_LSF_CLUSTER_NAME: "{{multicluster.onprem.cluster_name}}"
+    SERVER_IP: "{{vpn.ip}}"
+    RC_HOSTS_NAME: "{{rescon.machines}}"
+    cloud_master: "{{hostvars[groups['master'][0]]['ansible_hostname']}}"
+    onprem_master: "{{ multicluster.onprem.host | default(default_onprem) }}"
+    sndqueue: "{{ multicluster.sndqueue | default('send2gen2') }}"
+  include_tasks: config-lsf-master-multi-cluster.yml
+
+- name: "Add Cloud-master to hosts file"
+  vars:
+    ip: "{{groups['master'][0]}}"
+    host: "{{hostvars[groups['master'][0]]['ansible_hostname']}}"
+  lineinfile:
+    line: "{{ip}}    {{host}}   {{host}}   {{host}}"
+    path: "{{multicluster.onprem.conf_dir}}/hosts"
+    state: present
+    create: yes
+    mode: u=rw,go=r
+    owner: lsfadmin
+    group: root
+  become: yes

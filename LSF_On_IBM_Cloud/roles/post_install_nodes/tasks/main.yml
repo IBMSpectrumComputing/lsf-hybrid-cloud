@@ -1,0 +1,54 @@
+---
+# -----------------------------------
+#  Copyright IBM Corp. 1992,2020. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+- include_tasks: "../../common/tasks/get_files_dir.yml"
+  when: gen_files_dir is undefined or gen_files_dir == ""
+
+- name: Add id_rsa.lsfadmin to lsfadmin authorized keys
+  authorized_key:
+    user: lsfadmin
+    key: "{{ lookup('file', '{{ gen_files_dir }}/id_rsa.lsfadmin.pub') }}"
+
+- name: Copy id_rsa to lsfadmin ~/.ssh
+  copy:
+    src: "{{ gen_files_dir }}/id_rsa.lsfadmin"
+    dest: /opt/ibm/lsfsuite/.ssh/id_rsa
+    mode: "0600"
+    owner: lsfadmin
+    group: lsfadmin
+    backup: yes
+    force: yes
+
+- name: Copy id_rsa.pub to lsfadmin ~/.ssh
+  copy:
+    src: "{{ gen_files_dir }}/id_rsa.lsfadmin.pub"
+    dest: /opt/ibm/lsfsuite/.ssh/id_rsa.pub
+    owner: lsfadmin
+    group: lsfadmin
+    backup: yes
+
+
+- name: Keyscan workers and masters
+  command: "ssh-keyscan -trsa {{item}}"
+  loop: "{{groups['worker'] + groups['master']}}"
+  register: host_key_output
+  when: host_keys is undefined
+
+- set_fact:
+    host_keys: "{{host_key_output.results|json_query('[*].{host: item,
+                                        key: stdout_lines[0] }')}}"
+  when: host_keys is undefined
+
+- name: Set known_hosts for lsfadmin
+  known_hosts:
+    key: "{{ item.key }}"
+    name: "{{ item.host }}"
+    state: present
+  loop: "{{host_keys}}"
+  no_log: true
+  become: yes
+  become_user: lsfadmin

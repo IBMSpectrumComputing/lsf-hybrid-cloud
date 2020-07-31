@@ -1,0 +1,48 @@
+---
+# -----------------------------------
+#  Copyright IBM Corp. 1992,2020. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+- include_tasks: "../../common/tasks/get_files_dir.yml"
+  when: gen_files_dir is undefined or gen_files_dir == ""
+
+- name: Copy id_rsa to masters
+  copy:
+    src: "{{ gen_files_dir }}/id_rsa"
+    dest: /root/.ssh/
+    mode: "0600"
+    backup: yes
+    force: yes
+
+- name: Copy id_rsa.pub to masters
+  copy:
+    src: "{{ gen_files_dir }}/id_rsa.pub"
+    dest: /root/.ssh/
+    backup: yes
+
+- name: Keyscan workers and masters
+  command: "ssh-keyscan -trsa {{item}}"
+  loop: "{{groups['worker'] + groups['master']}}"
+  register: host_key_output
+
+- set_fact:
+    host_keys: "{{host_key_output.results|json_query('[*].{host: item,
+                                        key: stdout_lines[0] }')}}"
+
+# - name: test masters and workers to masters known_hosts
+#   vars:
+#     key: "{{ item.key }}"
+#     hostname: "{{ item.host }}" # the [2] depends on the command line for ssh-keyscan done above to map the target ansible_hostname to the right key
+#   debug:
+#     msg: "{{hostname}}: {{key}}"
+#   loop: "{{ host_keys }}"
+
+
+- name: Add masters and workers to masters known_hosts
+  known_hosts:
+    key: "{{ item.key }}"
+    name: "{{ item.host }}"
+    state: present
+  loop: "{{host_keys}}"

@@ -1,0 +1,16 @@
+---
+# -----------------------------------
+#  Copyright IBM Corp. 2020. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+# terraform version
+terraform_version: 0.12.28
+terraform_url_path: "https://releases.hashicorp.com/terraform/{{terraform_version}}/terraform_{{terraform_version}}_linux_amd64.zip"
+
+# IBM cloud terraform provider
+# Need to use at least v1.7.0 to ensure DNS working properly
+# Need to use at least v1.8.1 to ensure VPC cleanup working properly
+plugin_version: 1.8.1
+plugin_url_path: "https://github.com/IBM-Cloud/terraform-provider-ibm/releases/download/v{{plugin_version}}/linux_amd64.zip"
