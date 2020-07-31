@@ -70,7 +70,7 @@ SERVER_SYSTEMD_SERVICE="/etc/systemd/system/openvpn-server.service"
 SERVER_IPTABLES_SCRIPT="/root/iptables-server.sh"
 SERVER_TARFILE="/root/server.tgz"
 SERVER_TEMPDIR="/tmp/server"
-SERVER_PKGS="openvpn emacs"
+SERVER_PKGS="openvpn"
 # VPN subnet and mask default
 vpn_cidr="" # 10.8.0.0/24" #    TODO
 # VPC subnet and mask must be provided
@@ -90,7 +90,7 @@ CLIENT_SYSTEMD_SERVICE="/etc/systemd/system/openvpn-client.service"
 CLIENT_IPTABLES_SCRIPT="/root/iptables-client.sh"
 CLIENT_TEMPDIR="/tmp/client"
 CLIENT_TARFILE="/root/client.tgz"
-CLIENT_PKGS="openvpn easy-rsa emacs"
+CLIENT_PKGS="openvpn easy-rsa"
 
 validate_settings() {
     local func="${FUNCNAME[0]}()"

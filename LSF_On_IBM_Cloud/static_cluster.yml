@@ -164,12 +164,11 @@
 # Alternative VPN using OpenVPN
 - name: Cleanup OpenVPN
   hosts: localhost
-  tasks:
-    - debug:
-        msg: "ToBeDone"
+  roles:
+    - { role: disconnect_open_vpn, tags: disconnect_open_vpn }
   tags:
     - never
-    - clean_open_vpn
+    - disconnect_open_vpn
 
 - name: OpenVPN setup
   hosts: localhost

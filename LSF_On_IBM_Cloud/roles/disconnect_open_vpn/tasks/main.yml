@@ -37,15 +37,15 @@
 - name: "Template the setup script"
   vars:
     setup_type: "master"
-    purge: 0
+    purge: 1
   template:
-    src: "vpn_setup.sh.j2"
+    src: "../../open_vpn/templates/vpn_setup.sh.j2"
     dest: "{{gen_files_dir}}/scripts/setup.sh"
     mode: u=rwx,go=rx
 
 - name: "Upload remaining scripts"
   copy:
-    src: "{{item}}"
+    src: "../../open_vpn/files/{{item}}"
     dest: "{{gen_files_dir}}/scripts/{{item}}"
     mode: preserve
   loop:
