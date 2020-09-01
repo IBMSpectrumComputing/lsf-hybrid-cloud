@@ -47,7 +47,24 @@
   user:
     name: "{{item}}"
     home: "{{nfs_mnt_dir}}/home/{{item}}"
-    move_home: yes
-  when: inventory_hostname != hostvars[ groups['master'][0]]['inventory_hostname']
+    generate_ssh_key: yes
+  loop: "{{multicluster.lsf_user_list}}"
+  become: yes
+
+- name: Authorize cloud-side ssh keys
+  command:
+    argv:
+      - cp
+      - "{{nfs_mnt_dir}}/home/{{item}}/.ssh/id_rsa.pub"
+      - "{{nfs_mnt_dir}}/home/{{item}}/.ssh/authorized_keys"
+    creates: "{{nfs_mnt_dir}}/home/{{item}}/.ssh/authorized_keys"
+  loop: "{{multicluster.lsf_user_list}}"
+  become: yes
+
+- name: Check/correct permissions on authorized_key file
+  file:
+    path: "{{nfs_mnt_dir}}/home/{{item}}/.ssh/authorized_keys"
+    owner: "{{item}}"
+    mode: u=rw,go=r
   loop: "{{multicluster.lsf_user_list}}"
   become: yes

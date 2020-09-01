@@ -1,0 +1,153 @@
+---
+# -----------------------------------
+#  Copyright IBM Corp. 2020. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+# necessary workaround for fact-gathering issue:
+# ansible doesn't collect facts when running with a tag
+# that's only inside a role
+# see: https://github.com/ansible/ansible/issues/57529
+- hosts: "{{ansible_play_hosts}}"
+
+- name: VPN Connection Cleanup
+  hosts: localhost
+  roles:
+    - { role: disconnect_vpn, tags: disconnect_vpn }
+  tags:
+    - never
+    - clean_vpn
+
+# - name: static compute cleanup
+#   hosts: master,worker
+#   roles:
+#     - { role: clean_nfs_clnt, tags: clean_nfs_clnt }
+#     - { role: clean_compute, tags: clean_compute }
+#   tags:
+#     - cleanup
+
+# - name: Static master cleanup
+#   hosts: master
+#   roles:
+#     - { role: clean_nfs_clnt, tags: clean_nfs_clnt }
+#     - { role: clean_master, tags: clean_master }
+#   tags:
+#     - cleanup
+
+# - name: deployer cleanup
+#   hosts: deployer
+#   roles:
+#     - { role: clean_deployer, tags: clean_deployer }
+#   tags:
+#     - cleanup
+
+- name: local cleanup
+  hosts: localhost
+  roles:
+    - { role: clean_ssh_keypair, tags: clean_ssh_keypair }
+  tags:
+    - cleanup
+
+
+
+
+- name: ssh key-pair preparation
+  hosts: localhost
+  roles:
+    - { role: config_ssh_keypair,
+        tags: [config_ssh_keypair] }
+  tags:
+    - setup
+
+- name: deployer prep and configuration
+  hosts: deployer
+  roles:
+    - { role: prep_deployer,
+        tags: [prep_deployer,restart_master] }
+    - { role: config_deployer,
+        tags: config_deployer }
+  tags:
+    - setup
+
+- name: master prep
+  hosts: master
+  roles:
+    - { role: config_nfs_clnt,
+        tags: [config_nfs_clnt,restart_master] }
+    - { role: config_lsf_nodes,
+        tags: [config_lsf_nodes] }
+    - { role: prep_master,
+        tags: prep_master }
+  tags:
+    - setup
+
+- name: worker prep
+  hosts: worker
+  roles:
+    - { role: config_nfs_clnt,
+        tags: [config_nfs_clnt,restart_worker] }
+    - { role: config_lsf_nodes,
+        tags: config_lsf_nodes }
+    - { role: prep_worker,
+        tags: prep_worker }
+  tags:
+    - setup
+
+- name: deployer installs LSF
+  hosts: deployer
+  roles:
+    - { role: install_lsf,
+        tags: install_lsf }
+  tags:
+    - setup
+
+- name: configure LSF hosts
+  hosts: master,worker
+  roles:
+    - { role: restart_lsf,
+        tags: [restart_lsf,restart_worker,restart_master] }
+    - { role: post_install_nodes,
+        tags: [post_install_nodes,restart_worker] }
+    - { role: create_new_users,
+        tags: create_new_users }
+  tags:
+    - setup
+
+
+- name: Summary
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - debug:
+        msg:
+          - "LSF deployment completed on: {{ groups['compute'] }}"
+          - "Check the deployer_ansible.log file copied from {{ groups['master'][0] }} {{ hostvars[groups['master'][0]]['ansible_hostname'] }} to make sure everything went okay"
+  tags:
+    - setup
+
+- name: VPN Connection
+  hosts: localhost
+  roles:
+    - { role: connect_vpn, tags: connect_vpn }
+  tags:
+    - never
+    - vpn
+
+
+# Alternative VPN using OpenVPN
+- name: Cleanup OpenVPN
+  hosts: localhost
+  roles:
+    - { role: disconnect_open_vpn, tags: disconnect_open_vpn }
+  tags:
+    - never
+    - disconnect_open_vpn
+
+- name: OpenVPN setup
+  hosts: localhost
+  roles:
+    - { role: open_vpn, tags: open_vpn }
+  tags:
+    - never
+    - open_vpn
