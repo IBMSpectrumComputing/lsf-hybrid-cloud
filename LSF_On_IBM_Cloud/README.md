@@ -2,6 +2,9 @@ This setup will allocate VPC resources using Ansible and Terraform.
 
 ## Create a VPC in IBM Cloud and Install LSF:
 
+The default setup assumes an existing on-premise LSF cluster and running from the on-premise master host.
+See the section 6 for a cloud-only standalone LSF cluster setup.
+Note, that this is a proof-of-concept approach to show a few possible scenarios without claiming production-level robustness and handling. We welcome comments and suggestions for improvement.
 
 ### 1. Configuration of the setup
    * Specify where to allocate how many resources under which names etc.
@@ -49,7 +52,7 @@ In case you want the terraform user to be different from your current user, you 
 
    * Step 1.5 and 1.6 can be done in one step by running:
 ```
-  ansible-playbook -i tf_inventory.yml create_vpc.yml --tags "prereq" -K
+  ansible-playbook -i tf_inventory.yml create_vpc.yml --tags "prereq" [-K]
 ```
 
 
@@ -132,7 +135,7 @@ Instead of splitting the playbook into many files, we've enabled separate steps 
 This step will install a functional LSF cluster on the VPC. It will grab the list of local users and groups and enable their login. For the data manager to work, users need a home directory in a file system that's shared between the nodes of the VPC. The setup will create a home directory only for the users listed in variable `lsf_user_list` in `group_vars/lsf_install`.  The users or administrators will need to manually create or enable ssh keys for each user to allow passwordless login between on-premise and cloud LSF clusters (both ways). This step is not automated because it would require intrusive access the user directories and is therefore deemed inappropriate for this proof of concept example. The passwordless access is especially important for use of the LSF data manager.
 
 
-### 5. Multi-cluster configuration (incomplete yet)
+### 5. Multi-cluster configuration
 The `multicluster` section of `group_vars/lsf_install` is important to be set up for this step.
  * There's one section for the on-prem and one for the cloud-side LSF master
  * The `conf_dir` is the LSF configuration directory
@@ -144,7 +147,6 @@ The `multicluster` section of `group_vars/lsf_install` is important to be set up
  * `rc` configures resource connector items like the name of the dynamic hosts group
 
 To run on-prem and cloud steps for datamanager and multi-cluster in one step:
-NOTE: Not yet advisable because of missing bits and pieces!
 ```
 ansible-playbook -i ${GEN_FILES_DIR}/cluster.inventory static_cluster.yml --tags "config_mc"
 ```
@@ -167,6 +169,39 @@ ansible-playbook -i ${GEN_FILES_DIR}/cluster.inventory static_cluster.yml --tags
 ```
 ansible-playbook -i ${GEN_FILES_DIR}/cluster.inventory static_cluster.yml --tags "mc_onprem"
 ```
+
+## 6. Standalone LSF cluster setup in the cloud
+
+This section explains a shortened version of the setup to only create a single/standalone LSF cluster on freshly deployed cloud nodes.
+
+ * Follow the configuration steps above (section 1). You can skip the VPN settings and multi-cluster settings for this.
+ * configure section `cloud_only` in `group_vars/lsf_install` to create users and a group
+ * Run step 2
+ * Skip step 3
+ * Replace the command in step 4 with:
+```
+ansible-playbook -i ${GEN_FILES_DIR}/cluster.inventory cloud_only.yml --tags "setup"
+```
+
+ * Verify function if the steps were successful: In order to verify
+   function, you log into the cloud master as root (`ssh -F
+   ${GEN_FILES_DIR} <cloud_master_ip>` - IPs can be found in
+   `${GEN_FILES_DIR/clusterhosts-*`) and use `su lsfadmin bsub sleep
+   30` to submit a test job that sleeps for 30 seconds. The user's ssh
+   keys will be located in `${GEN_FILES_DIR}/keys`. These keys are the
+   only means for users to log in.
+
+ * The use of private addresses for the cloud nodes makes the login a little more involed (a good moment to make a nice ssh-config for everyday use). The command to test user login:
+
+```
+ssh -F ${GEN_FILES_DIR}/ssh_config -i ${GEN_FILES_DIR}/userkeys/id_rsa_alice alice@<cloud_master_ip>
+```
+   Once you're logged in as 'alice', try: `bsub sleep 30` to confirm a functional LSF setup for users.
+
+
+## References, Further Reading
+ * [Detailed tutorial](https://cloud.ibm.com/docs/solution-tutorials?topic=solution-tutorials-hpc-eda)
+ * [Cloud bursting blog post](https://www.ibm.com/cloud/blog/cloud-bursting-an-eda-workload-with-ibm-spectrum-lsf-and-the-ibm-cloud)
 
 
 ## TROUBLESHOOTING

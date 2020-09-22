@@ -57,8 +57,6 @@
   roles:
     - { role: config_ssh_keypair,
         tags: [config_ssh_keypair] }
-    - { role: collect_env,
-        tags: collect_env }
   tags:
     - setup
 
@@ -81,8 +79,6 @@
         tags: [config_lsf_nodes] }
     - { role: prep_master,
         tags: prep_master }
-    - { role: enable_users,
-        tags: enable_users }
   tags:
     - setup
 
@@ -95,8 +91,6 @@
         tags: config_lsf_nodes }
     - { role: prep_worker,
         tags: prep_worker }
-    - { role: enable_users,
-        tags: enable_users }
   tags:
     - setup
 
@@ -115,6 +109,8 @@
         tags: [restart_lsf,restart_worker,restart_master] }
     - { role: post_install_nodes,
         tags: [post_install_nodes,restart_worker] }
+    - { role: create_new_users,
+        tags: create_new_users }
   tags:
     - setup
 
@@ -137,28 +133,6 @@
   tags:
     - never
     - vpn
-
-- name: LSF Multi-Cluster config update (Cloud Master)
-  hosts: master
-  roles:
-    - { role: config_dm,
-        tags: [config_dm,config_dm_cloud] }
-    - { role: mc_cloud,
-        tags: mc_cloud }
-  tags:
-    - config_mc
-    - config_mc_cloud
-
-- name: LSF Multi-Cluster config (Local Master)
-  hosts: local
-  roles:
-    - { role: config_dm,
-        tags: [config_dm,config_dm_onprem] }
-    - { role: mc_onprem,
-        tags: mc_onprem }
-  tags:
-    - config_mc
-    - config_mc_onprem
 
 
 # Alternative VPN using OpenVPN

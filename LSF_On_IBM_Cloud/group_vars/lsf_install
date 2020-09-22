@@ -43,6 +43,12 @@ multicluster:
   # role enable_users will create a cloud-side home in existing NFS mount
   lsf_user_list: []
 
+cloud_only:
+  # list of users to be created on the cloud lsf cluster
+  # role create_new_users will create a cloud-side home in existing NFS mount and generate ssh-keys
+  # the private keys will be downloaded to the executing host to provide to users for login
+  lsf_user_list: [alice, bob, coffee, donut]
+  lsf_user_group: lsfusers
 
 
 vpn:
