@@ -1,0 +1,47 @@
+# -----------------------------------
+#  Copyright IBM Corp. 2021. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+# The following information can be obtained using IBM Cloud CLI
+# or you can use playbook/scripts/get-vm-info.sh to retrieve the
+# information. The script takes the name of your VSI. Use
+# "ibmcloud is instances" to get the VSI name.
+
+GEN2_Region: "us-south"
+GEN2_Zone: "us-south-3"
+GEN2_VPC_ID: "example-vpc-id8b-802f-4ead-95dc-638b3e004b1b"
+GEN2_Image_ID: "example-image-id-6a9a-496d-8063-5c39932f6ded"
+GEN2_SUBNET_ID: "example-subnet-id-2aa4-4f93-af6c-04d6ef4922ef"
+GEN2_SG_ID: "example-6d112413-1834-4810-8af2-798929bfee8d"
+GEN2_PROFILE: "bx2-4x16"
+CORES_PER_SOCKET: 2
+SOCKET_PER_NODE: 1
+MEMORY_PER_NODE: "8192"
+
+
+# The following information can be obtained using IBM Cloud CLI
+# or you can use playbook/scripts/get-dns-info.sh to retrieve the
+# information. The script takes the name of your DNS instance. Use
+# "ibmcloud dns instances " to get your DNS instance name.
+# There may be multiple zones for a given service instance.
+# We will assume only one zone exist for this DNS instance.
+GEN2_DNS_SVCS_ENDPOINT: "https://api.dns-svcs.cloud.ibm.com"
+GEN2_DNS_Instance_ID: "example-dns-instance-id-41ab-b897-475f26ddb64d"
+GEN2_DNS_Zone_ID: "example-dns-zone-id-4bee-8a0a-38f48ceae3e7"
+GEN2_DNS_Domain_Name: "example.ibm.perf"
+
+# the key name on the cloud that contains the RSA public key in the LSF master
+# this key needs to be created to match what is in ~/.ssh/id_rsa.pub on your
+# master node.  It likely does not exist and will need to be created now.
+lsf_key_name: example-key
+
+# max number of dynamic hosts
+rc_maxNumber: 100
+
+# the prefix of the name for dynamic hosts
+rc_vm_prefix: example-dyn 
+
+lsf_master_ip: 10.10.10.10
+lsf_master_hostname: example.ibm.com 

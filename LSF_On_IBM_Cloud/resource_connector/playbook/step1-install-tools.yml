@@ -1,0 +1,11 @@
+---
+# -----------------------------------
+#  Copyright IBM Corp. 2021. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+- name: Install tools 
+  hosts: LSF_Masters
+  roles:
+    - install-tools

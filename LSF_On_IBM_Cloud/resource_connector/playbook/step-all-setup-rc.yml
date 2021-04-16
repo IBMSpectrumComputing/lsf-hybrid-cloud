@@ -1,0 +1,18 @@
+---
+# -----------------------------------
+#  Copyright IBM Corp. 2021. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+# Install tools like terraform and ibm cloud provider terraform plugins
+- import_playbook: step1-install-tools.yml
+
+# Prepare the configuration/provision files for GEN2
+- import_playbook: step2-prepare-files.yml
+
+# Install configs, scripts, credentials (the RC implementation)
+- import_playbook: step3-deploy-rc.yml
+
+# Configure LSF Resource Connector
+- import_playbook: step4-config-lsf-rc.yml

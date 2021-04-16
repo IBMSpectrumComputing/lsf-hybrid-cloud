@@ -1,0 +1,38 @@
+---
+# -----------------------------------
+#  Copyright IBM Corp. 2021. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+
+- name: Install centos-release-scl
+  yum:
+    name: centos-release-scl
+    state: installed
+    update_cache: yes
+
+- name: Install python 3.6
+  yum:
+    name: rh-python36
+    state: installed
+    update_cache: yes
+
+- name: Install VPC Python SDK
+  shell: /opt/rh/rh-python36/root/usr/bin/pip3.6 install --upgrade "ibm-vpc>=0.4.1"
+
+- name: Install DNS Python SDK
+  shell: /opt/rh/rh-python36/root/usr/bin/pip3.6 install --upgrade "ibm-cloud-networking-services>=0.4.1"
+
+- name: see if /usr/bin/python3 exists
+  stat:
+    path: /usr/bin/python3
+  register: pyln
+
+- name: create a symlink to the python3 bin if it does not exist
+  file:
+    src: /opt/rh/rh-python36/root/usr/bin/python3.6
+    dest: /usr/bin/python3 
+    state: link
+  when: not pyln.stat.exists 
+

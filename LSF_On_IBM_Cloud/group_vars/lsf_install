@@ -10,6 +10,8 @@ lsf:
     local_path: ./Packages
     target_path: /root
     bin: lsfshpc10.2.0.9-x86_64.bin
+    # if the lsf installer needs to be patched, uncomment the following line and add the name of the file
+#    patch: somepatch.x86_64.bin
 
 
 multicluster:

@@ -1,0 +1,20 @@
+---
+# -----------------------------------
+#  Copyright IBM Corp. 2021. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+- name: Configure LSF to enable resource connector
+  hosts: LSF_Masters
+  roles:
+    - config-lsf-rc
+
+- name: Stop lsfd
+  hosts: LSF_Masters, LSF_Servers
+  tasks:
+  - name: stop lsfd
+    service: name=lsfd state=stopped
+
+  - name: start lsfd
+    service: name=lsfd state=started

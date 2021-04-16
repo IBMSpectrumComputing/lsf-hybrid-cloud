@@ -5,11 +5,24 @@
 #  restricted by GSA ADP Schedule Contract with IBM Corp.
 # -----------------------------------
 
+- name: Copy the LSF installer patch to the deployer machine
+  copy:
+    src: "{{ lsf.installer.local_path }}/{{ lsf.installer.patch }}"
+    dest: "{{ lsf.installer.target_path }}"
+    force: no
+  when: lsf.installer.patch is defined
+
 - name: Copy the LSF installer to the deployer machine
   copy:
     src: "{{ lsf.installer.local_path }}/{{ lsf.installer.bin }}"
     dest: "{{ lsf.installer.target_path }}"
     force: no
+
+- name: Change permissions for installer patch to executable
+  file:
+    path: "{{ lsf.installer.target_path }}/{{ lsf.installer.patch }}"
+    mode: "0700"
+  when: lsf.installer.patch is defined
 
 - name: Change permissions for installer to executable
   file:
@@ -28,6 +41,9 @@
     stdin: |
       1
 
+- name: Extract the patch
+  command: "{{ lsf.installer.target_path }}/{{ lsf.installer.patch }}"
+  when: lsf.installer.patch is defined
 
 
 - name: Create soft link to lsf_install/playbook in /root
@@ -45,3 +61,4 @@
 
 - name: Set up NFS server on deployer
   include: nfs_server.yml
+

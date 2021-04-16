@@ -1,0 +1,11 @@
+{
+    "providers":[
+        {
+            "name": "ibmcloudgen2",
+            "type": "ibmcloudgen2Prov",
+            "confPath": "resource_connector/ibmcloudgen2",
+            "scriptPath": "resource_connector/ibmcloudgen2"
+        }
+    ]
+}
+
