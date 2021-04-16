@@ -1,0 +1,11 @@
+---
+# -----------------------------------
+#  Copyright IBM Corp. 2021. All rights reserved.
+#  US Government Users Restricted Rights - Use, duplication or disclosure
+#  restricted by GSA ADP Schedule Contract with IBM Corp.
+# -----------------------------------
+
+- name: Prepare files (confg files for GEN2 and provision.sh) 
+  hosts: local
+  roles:
+    - prepare-files
