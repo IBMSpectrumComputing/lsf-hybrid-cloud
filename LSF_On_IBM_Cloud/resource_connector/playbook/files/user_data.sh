@@ -40,7 +40,7 @@ iamtok=$(curl -k -X POST \
   --header "Content-Type: application/x-www-form-urlencoded" \
   --header "Accept: application/json" \
   --data-urlencode "grant_type=urn:ibm:params:oauth:grant-type:apikey" \
-  --data-urlencode "apikey=FPLaT_INYIuoRysAQ-xK11kjrlJ6kGQuqZs99hc0UrHI" \
+  --data-urlencode "apikey=<an IBM Cloud API Key>" \
   "https://iam.cloud.ibm.com/identity/token" | awk -F[,:] '{print $2}' )
 
 #--create the DNS 'A' record json for this machine

@@ -82,6 +82,12 @@
     regexp: '^DNSZONE_ID='
     line: DNSZONE_ID={{ GEN2_DNS_Zone_ID }}
 
+- name: set the API Key for use with DNS 
+  lineinfile:
+    path: "{{ role_path }}/files/user_data.sh"
+    regexp: '--data-urlencode "apikey='
+    line:   --data-urlencode "apikey={{ lookup('env','IBMCLOUD_API_KEY') }}" \
+
 - name: set the LSF_TOP  
   lineinfile:
     path: "{{ role_path }}/files/user_data.sh"
