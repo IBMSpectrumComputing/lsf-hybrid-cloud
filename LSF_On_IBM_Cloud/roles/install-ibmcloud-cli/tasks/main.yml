@@ -1,9 +1,0 @@
----
-# -----------------------------------
-#  Copyright IBM Corp. 2020. All rights reserved.
-#  US Government Users Restricted Rights - Use, duplication or disclosure
-#  restricted by GSA ADP Schedule Contract with IBM Corp.
-# -----------------------------------
-
-# Install IBM CLOUD CLI
-- include: install-ibmcloud-cli.yml
